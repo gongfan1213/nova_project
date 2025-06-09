@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { SKIP_AUTH, DEFAULT_MOCK_USER } from "@/lib/auth-config";
 
 type UserContentType = {
   getUser: () => Promise<User | undefined>;
@@ -21,9 +22,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user || typeof window === "undefined") return;
-
-    getUser();
+    if (SKIP_AUTH) {
+      // 直接设置默认用户，跳过Supabase认证
+      setUser(DEFAULT_MOCK_USER);
+      setLoading(false);
+    } else {
+      // 使用原始逻辑获取用户
+      if (user || typeof window === "undefined") return;
+      getUser();
+    }
   }, []);
 
   async function getUser() {
@@ -32,6 +39,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return user;
     }
 
+    if (SKIP_AUTH) {
+      // 跳过Supabase用户获取，直接返回模拟用户
+      setUser(DEFAULT_MOCK_USER);
+      setLoading(false);
+      return DEFAULT_MOCK_USER;
+    }
+
+    // 原始Supabase用户获取逻辑
     const supabase = createSupabaseClient();
 
     const {

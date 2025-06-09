@@ -77,6 +77,7 @@ interface GraphData {
   artifactUpdateFailed: boolean;
   chatStarted: boolean;
   searchEnabled: boolean;
+  conversationId: string | undefined;
   setSearchEnabled: Dispatch<SetStateAction<boolean>>;
   setChatStarted: Dispatch<SetStateAction<boolean>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
@@ -90,6 +91,7 @@ interface GraphData {
   clearState: () => void;
   switchSelectedThread: (thread: Thread) => void;
   setUpdateRenderedArtifactRequired: Dispatch<SetStateAction<boolean>>;
+  setConversationId: Dispatch<SetStateAction<string | undefined>>;
 }
 
 type GraphContentType = {
@@ -142,6 +144,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState(false);
   const [artifactUpdateFailed, setArtifactUpdateFailed] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(false);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
 
   const [_, setWebSearchResultsId] = useQueryState(
     WEB_SEARCH_RESULTS_QUERY_PARAM
@@ -262,9 +265,344 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setArtifact(undefined);
     setFirstTokenReceived(true);
+    setConversationId(undefined);
   };
 
+  // 新增：处理第一种交互模式的函数
+  const streamFirstTimeGeneration = async (params: GraphInput) => {
+    setFirstTokenReceived(false);
+    setError(false);
+    setIsStreaming(true);
+    setRunId(undefined);
+    setFeedbackSubmitted(false);
+
+    try {
+      // 第一步：调用generateArtifact API
+      const userQuery = params.messages && params.messages.length > 0 
+        ? params.messages[params.messages.length - 1]?.content || ""
+        : "";
+      
+      const generateResponse = await fetch("/api/dify/generate-artifact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: userQuery,
+        }),
+      });
+
+      if (!generateResponse.ok) {
+        throw new Error("Failed to generate artifact");
+      }
+
+      const reader = generateResponse.body?.getReader();
+      const decoder = new TextDecoder();
+      let artifactContent = "";
+      let receivedConversationId = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.trim() && line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.event === 'message') {
+                  // 提取 conversation_id
+                  if (data.conversation_id && !receivedConversationId) {
+                    receivedConversationId = data.conversation_id;
+                    setConversationId(receivedConversationId);
+                  }
+                  
+                  if (data.answer) {
+                    artifactContent += data.answer;
+                    
+                    // 实时更新artifact显示
+                    const newArtifact: ArtifactV3 = {
+                      currentIndex: 1,
+                      contents: [{
+                        index: 1,
+                        type: "text" as const, // 这里可以根据内容判断是code还是text
+                        title: "Generated Content",
+                        fullMarkdown: artifactContent,
+                      }],
+                    };
+                    
+                    if (!firstTokenReceived) {
+                      setFirstTokenReceived(true);
+                    }
+                    setArtifact(newArtifact);
+                  }
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+      }
+
+      // 第二步：调用generateFollowup API
+      const chatHistory = params.messages 
+        ? params.messages.map(msg => `${msg.constructor.name}: ${msg.content}`).join('\n')
+        : "";
+      
+      const followupResponse = await fetch("/api/dify/generate-followup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          artifact: artifactContent,
+          query: chatHistory,
+        }),
+      });
+
+      if (!followupResponse.ok) {
+        throw new Error("Failed to generate followup");
+      }
+
+      const followupReader = followupResponse.body?.getReader();
+      let followupContent = "";
+      const followupMessageId = `followup-${uuidv4()}`;
+
+      if (followupReader) {
+        while (true) {
+          const { done, value } = await followupReader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.trim() && line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.event === 'message' && data.answer) {
+                  followupContent += data.answer;
+                  
+                  // 实时更新聊天消息
+                  const followupMessage = new AIMessage({
+                    id: followupMessageId,
+                    content: followupContent,
+                  });
+                  
+                  setMessages((prevMessages) => {
+                    const existingIndex = prevMessages.findIndex(msg => msg.id === followupMessageId);
+                    if (existingIndex >= 0) {
+                      const newMessages = [...prevMessages];
+                      newMessages[existingIndex] = followupMessage;
+                      return newMessages;
+                    } else {
+                      return [...prevMessages, followupMessage];
+                    }
+                  });
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error("Error in first time generation:", error);
+      toast({
+        title: "Error generating content",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+        duration: 5000,
+      });
+      setError(true);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  // 新增：处理重写artifact的函数
+  const streamRewriteArtifact = async (params: GraphInput) => {
+    if (!conversationId) {
+      toast({
+        title: "Error",
+        description: "No conversation ID found. Please start a new conversation.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    setFirstTokenReceived(false);
+    setError(false);
+    setIsStreaming(true);
+    setRunId(undefined);
+    setFeedbackSubmitted(false);
+
+    try {
+      // 第一步：调用generateArtifact API，传入conversation_id
+      const userQuery = params.messages && params.messages.length > 0 
+        ? params.messages[params.messages.length - 1]?.content || ""
+        : "";
+      
+      const generateResponse = await fetch("/api/dify/generate-artifact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: userQuery,
+          conversation_id: conversationId,
+        }),
+      });
+
+      if (!generateResponse.ok) {
+        throw new Error("Failed to rewrite artifact");
+      }
+
+      const reader = generateResponse.body?.getReader();
+      const decoder = new TextDecoder();
+      let artifactContent = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.trim() && line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.event === 'message' && data.answer) {
+                  artifactContent += data.answer;
+                  
+                  // 覆盖更新artifact显示（不是追加）
+                  const newArtifact: ArtifactV3 = {
+                    currentIndex: 1,
+                    contents: [{
+                      index: 1,
+                      type: "text" as const,
+                      title: "Generated Content",
+                      fullMarkdown: artifactContent,
+                    }],
+                  };
+                  
+                  if (!firstTokenReceived) {
+                    setFirstTokenReceived(true);
+                  }
+                  setArtifact(newArtifact);
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+      }
+
+      // 第二步：调用generateFollowup API
+      const chatHistory = params.messages 
+        ? params.messages.map(msg => `${msg.constructor.name}: ${msg.content}`).join('\n')
+        : "";
+      
+      const followupResponse = await fetch("/api/dify/generate-followup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          artifact: artifactContent,
+          query: chatHistory,
+        }),
+      });
+
+      if (!followupResponse.ok) {
+        throw new Error("Failed to generate followup");
+      }
+
+      const followupReader = followupResponse.body?.getReader();
+      let followupContent = "";
+      const followupMessageId = `followup-${uuidv4()}`;
+
+      if (followupReader) {
+        while (true) {
+          const { done, value } = await followupReader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.trim() && line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.event === 'message' && data.answer) {
+                  followupContent += data.answer;
+                  
+                  // 追加新的聊天消息（不覆盖）
+                  const followupMessage = new AIMessage({
+                    id: followupMessageId,
+                    content: followupContent,
+                  });
+                  
+                  setMessages((prevMessages) => {
+                    const existingIndex = prevMessages.findIndex(msg => msg.id === followupMessageId);
+                    if (existingIndex >= 0) {
+                      // 更新已存在的消息内容
+                      const newMessages = [...prevMessages];
+                      newMessages[existingIndex] = followupMessage;
+                      return newMessages;
+                    } else {
+                      // 追加新消息
+                      return [...prevMessages, followupMessage];
+                    }
+                  });
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error("Error in rewrite artifact:", error);
+      toast({
+        title: "Error rewriting artifact",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+        duration: 5000,
+      });
+      setError(true);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  // 修改原来的streamMessage函数，添加条件判断
   const streamMessageV2 = async (params: GraphInput) => {
+    // 判断是否为第一次生成新artifact的情况
+    if (!artifact && params.messages && params.messages.length > 0) {
+      // 第一种交互模式：第一次生成新artifact
+      return streamFirstTimeGeneration(params);
+    }
+    
+    // 判断是否为重写artifact的情况
+    if (artifact && params.messages && params.messages.length > 0 && conversationId) {
+      // 重写artifact的交互模式
+      return streamRewriteArtifact(params);
+    }
+
+    // 原有的其他交互模式逻辑保持不变
     setFirstTokenReceived(false);
     setError(false);
     if (!assistantsData.selectedAssistant) {
@@ -294,10 +632,10 @@ export function GraphProvider({ children }: { children: ReactNode }) {
 
     const messagesInput = {
       // `messages` contains the full, unfiltered list of messages
-      messages: params.messages,
+      messages: params.messages || [],
       // `_messages` contains the list of messages which are included
       // in the LLMs context, including summarization messages.
-      _messages: params.messages,
+      _messages: params.messages || [],
     };
 
     // TODO: update to properly pass the highlight data back
@@ -1428,6 +1766,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       chatStarted,
       artifactUpdateFailed,
       searchEnabled,
+      conversationId,
       setSearchEnabled,
       setChatStarted,
       setIsStreaming,
@@ -1441,6 +1780,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       clearState,
       switchSelectedThread,
       setUpdateRenderedArtifactRequired,
+      setConversationId,
     },
   };
 
