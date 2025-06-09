@@ -2,7 +2,7 @@
 
 ## 修改概述
 
-本次修改将Open Canvas项目中第一种交互模式（首次生成新artifact）的逻辑从原来的LangGraph调用改为调用Dify API接口，并新增了重写artifact的功能。
+本次修改将Nova项目中第一种交互模式（首次生成新artifact）的逻辑从原来的LangGraph调用改为调用Dify API接口，并新增了重写artifact的功能。
 
 ## 修改的交互模式
 

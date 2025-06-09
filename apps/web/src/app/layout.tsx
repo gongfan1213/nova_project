@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Open Canvas",
-  description: "Open Canvas Chat UX by LangChain",
+  title: "Nova",
+  description: "Nova Chat UX by LangChain",
 };
 
 export default function RootLayout({

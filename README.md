@@ -1,31 +1,31 @@
-# Open Canvas
+# Nova
 
 [TRY IT OUT HERE](https://opencanvas.langchain.com/)
 
 ![Screenshot of app](./static/screenshot.png)
 
-Open Canvas is an open source web application for collaborating with agents to better write documents. It is inspired by [OpenAI's "Canvas"](https://openai.com/index/introducing-canvas/), but with a few key differences.
+Nova is an open source web application for collaborating with agents to better write documents. It is inspired by [OpenAI's "Canvas"](https://openai.com/index/introducing-canvas/), but with a few key differences.
 
 1. **Open Source**: All the code, from the frontend, to the content generation agent, to the reflection agent is open source and MIT licensed.
-2. **Built in memory**: Open Canvas ships out of the box with a [reflection agent](https://langchain-ai.github.io/langgraphjs/tutorials/reflection/reflection/) which stores style rules and user insights in a [shared memory store](https://langchain-ai.github.io/langgraphjs/concepts/memory/). This allows Open Canvas to remember facts about you across sessions.
-3. **Start from existing documents**: Open Canvas allows users to start with a blank text, or code editor in the language of their choice, allowing you to start the session with your existing content, instead of being forced to start with a chat interaction. We believe this is an ideal UX because many times you will already have some content to start with, and want to iterate on-top of it.
+2. **Built in memory**: Nova ships out of the box with a [reflection agent](https://langchain-ai.github.io/langgraphjs/tutorials/reflection/reflection/) which stores style rules and user insights in a [shared memory store](https://langchain-ai.github.io/langgraphjs/concepts/memory/). This allows Nova to remember facts about you across sessions.
+3. **Start from existing documents**: Nova allows users to start with a blank text, or code editor in the language of their choice, allowing you to start the session with your existing content, instead of being forced to start with a chat interaction. We believe this is an ideal UX because many times you will already have some content to start with, and want to iterate on-top of it.
 
 ## Features
 
-- **Memory**: Open Canvas has a built in memory system which will automatically generate reflections and memories on you, and your chat history. These are then included in subsequent chat interactions to give a more personalized experience.
+- **Memory**: Nova has a built in memory system which will automatically generate reflections and memories on you, and your chat history. These are then included in subsequent chat interactions to give a more personalized experience.
 - **Custom quick actions**: Custom quick actions allow you to define your own prompts which are tied to your user, and persist across sessions. These then can be easily invoked through a single click, and apply to the artifact you're currently viewing.
 - **Pre-built quick actions**: There are also a series of pre-built quick actions for common writing and coding tasks that are always available.
 - **Artifact versioning**: All artifacts have a "version" tied to them, allowing you to travel back in time and see previous versions of your artifact.
 - **Code, Markdown, or both**: The artifact view allows for viewing and editing both code, and markdown. You can even have chats which generate code, and markdown artifacts, and switch between them.
-- **Live markdown rendering & editing**: Open Canvas's markdown editor allows you to view the rendered markdown while you're editing, without having to toggle back and fourth.
+- **Live markdown rendering & editing**: Nova's markdown editor allows you to view the rendered markdown while you're editing, without having to toggle back and fourth.
 
 ## Setup locally
 
-This guide will cover how to setup and run Open Canvas locally. If you prefer a YouTube video guide, check out [this video](https://youtu.be/sBzcQYPMekc).
+This guide will cover how to setup and run Nova locally. If you prefer a YouTube video guide, check out [this video](https://youtu.be/sBzcQYPMekc).
 
 ### Prerequisites
 
-Open Canvas requires the following API keys and external services:
+Nova requires the following API keys and external services:
 
 #### Package Manager
 
@@ -98,7 +98,7 @@ To verify authentication works, run `yarn dev` and visit [localhost:3000](http:/
 
 ### Setup LangGraph Server
 
-The first step to running Open Canvas locally is to build the application. This is because Open Canvas uses a monorepo setup, and requires workspace dependencies to be build so other packages/apps can access them.
+The first step to running Nova locally is to build the application. This is because Nova uses a monorepo setup, and requires workspace dependencies to be build so other packages/apps can access them.
 
 Run the following command from the root of the repository:
 
@@ -116,7 +116,7 @@ Ready!
 - 🎨 Studio UI: https://smith.langchain.com/studio?baseUrl=http://localhost:54367
 ```
 
-After your LangGraph server is running, execute the following command inside `apps/web` to start the Open Canvas frontend:
+After your LangGraph server is running, execute the following command inside `apps/web` to start the Nova frontend:
 
 ```bash
 yarn dev
@@ -128,7 +128,7 @@ Then, open [localhost:3000](http://localhost:3000) with your browser and start i
 
 ## LLM Models
 
-Open Canvas is designed to be compatible with any LLM model. The current deployment has the following models configured:
+Nova is designed to be compatible with any LLM model. The current deployment has the following models configured:
 
 - **Anthropic Claude 3 Haiku 👤**: Haiku is Anthropic's fastest model, great for quick tasks like making edits to your document. Sign up for an Anthropic account [here](https://console.anthropic.com/).
 - **Fireworks Llama 3 70B 🦙**: Llama 3 is a SOTA open source model from Meta, powered by [Fireworks AI](https://fireworks.ai/). You can sign up for an account [here](https://fireworks.ai/login).
@@ -148,7 +148,7 @@ If you'd like to add a new model, follow these simple steps:
 
 ### Local Ollama models
 
-Open Canvas supports calling local LLMs running on Ollama. This is not enabled in the hosted version of Open Canvas, but you can use this in your own local/deployed Open Canvas instance.
+Nova supports calling local LLMs running on Ollama. This is not enabled in the hosted version of Nova, but you can use this in your own local/deployed Nova instance.
 
 To use a local Ollama model, first ensure you have [Ollama](https://ollama.com) installed, and a model that supports tool calling pulled (the default model is `llama3.3`).
 
@@ -161,7 +161,7 @@ Then, set the `NEXT_PUBLIC_OLLAMA_ENABLED` environment variable to `true`, and t
 
 ## Troubleshooting
 
-Below are some common issues you may run into if running Open Canvas yourself:
+Below are some common issues you may run into if running Nova yourself:
 
 - **I have the LangGraph server running successfully, and my client can make requests, but no text is being generated:** This can happen if you start & connect to multiple different LangGraph servers locally in the same browser. Try clearing the `oc_thread_id_v2` cookie and refreshing the page. This is because each unique LangGraph server has its own database where threads are stored, so a thread ID from one server will not be found in the database of another server.
 
@@ -175,9 +175,9 @@ Below are some common issues you may run into if running Open Canvas yourself:
 
 ### Features
 
-Below is a list of features we'd like to add to Open Canvas in the near future:
+Below is a list of features we'd like to add to Nova in the near future:
 
-- **Render React in the editor**: Ideally, if you have Open Canvas generate React (or HTML) code, we should be able to render it live in the editor. **Edit**: This is in the planning stage now!
+- **Render React in the editor**: Ideally, if you have Nova generate React (or HTML) code, we should be able to render it live in the editor. **Edit**: This is in the planning stage now!
 - **Multiple assistants**: Users should be able to create multiple assistants, each having their own memory store.
 - **Give assistants custom 'tools'**: Once we've implemented `RemoteGraph` in LangGraph.js, users should be able to give assistants access to call their own graphs as tools. This means you could customize your assistant to have access to current events, your own personal knowledge graph, etc.
 
@@ -185,7 +185,7 @@ Do you have a feature request? Please [open an issue](https://github.com/langcha
 
 ### Contributing
 
-We'd like to continue developing and improving Open Canvas, and want your help!
+We'd like to continue developing and improving Nova, and want your help!
 
 To start, there are a handful of GitHub issues with feature requests outlining improvements and additions to make the app's UX even better.
 There are three main labels:

@@ -75,7 +75,7 @@ export function Login() {
             alt="LangChain Logo"
             className="rounded-full"
           />
-          Open Canvas
+          Nova
         </div>
       </div>
       <div className="lg:p-8">
