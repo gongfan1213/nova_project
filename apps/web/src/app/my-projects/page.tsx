@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 // import styles from "@/styles/MyProjects.module.css";
 // import Header from "@/components/Header";
-// import NewProjectDialog from "@/components/NewProjectDialog";
-// import ProjectManageDialog from "@/components/ProjectManageDialog";
-// import NewTagDialog from "@/components/NewTagDialog";
+import NewProjectDialog from "@/components/NewProjectDialog";
+import ProjectManageDialog from "@/components/ProjectManageDialog";
+import NewTagDialog from "@/components/NewTagDialog";
 import Link from "next/link";
 
 const MyProjects = () => {
@@ -60,6 +60,32 @@ const MyProjects = () => {
     }
   ]);
 
+    // 新增项目
+    const handleAddProject = (title: string, description: string, category: string) => {
+      const newProject = {
+        id: Date.now().toString(),
+        title,
+        description,
+        status: "草稿",
+        category,
+        lastModified: new Date().toISOString().split('T')[0],
+        statusColor: "bg-yellow-100 text-yellow-800"
+      };
+      setProjects([newProject, ...projects]);
+    };
+  
+    // 删除多个项目
+    const handleDeleteProjects = (projectIds: string[]) => {
+      setProjects(prev => prev.filter(project => !projectIds.includes(project.id)));
+    };
+  
+    // 新增标签
+    const handleAddTag = (newTag: string) => {
+      if (!tags.includes(newTag)) {
+        setTags([...tags, newTag]);
+      }
+    };
+
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -104,12 +130,12 @@ const MyProjects = () => {
                     {filter}
                   </Button>
                 ))}
-                {/* <NewTagDialog onAddTag={handleAddTag} /> */}
+                  <NewTagDialog onAddTag={handleAddTag} />
               </div>
             </div>
             <div className="flex space-x-3">
-              {/* <NewProjectDialog onAddProject={handleAddProject} availableTags={tags} onAddTag={handleAddTag} /> */}
-              {/* <ProjectManageDialog projects={projects} onDeleteProjects={handleDeleteProjects} /> */}
+              <NewProjectDialog onAddProject={handleAddProject} availableTags={tags} onAddTag={handleAddTag} /> 
+              <ProjectManageDialog projects={projects} onDeleteProjects={handleDeleteProjects} />
             </div>
           </div>
         </div>
