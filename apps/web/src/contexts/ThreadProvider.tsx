@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ALL_MODEL_NAMES,
   ALL_MODELS,

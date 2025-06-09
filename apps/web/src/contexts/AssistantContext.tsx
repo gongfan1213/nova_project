@@ -1,3 +1,5 @@
+"use client";
+
 import { useToast } from "@/hooks/use-toast";
 import { Assistant } from "@langchain/langgraph-sdk";
 import { ContextDocument } from "@opencanvas/shared/types";

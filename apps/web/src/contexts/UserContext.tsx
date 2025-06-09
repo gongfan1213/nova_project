@@ -1,3 +1,5 @@
+"use client";
+
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import {

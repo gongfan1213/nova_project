@@ -95,9 +95,9 @@ export const Composer: FC<ComposerProps> = (props: ComposerProps) => {
               <TooltipIconButton
                 tooltip="Send"
                 variant="default"
-                className="my-2.5 size-8 p-2 transition-opacity ease-in"
+                className="my-2.5 size-8 p-2 transition-opacity ease-in bg-red-500 hover:bg-red-600 rounded-lg"
               >
-                <SendHorizontalIcon />
+                <SendHorizontalIcon className="text-white" />
               </TooltipIconButton>
             </ComposerPrimitive.Send>
           </ThreadPrimitive.If>

@@ -255,7 +255,7 @@ export function ThreadHistoryComponent(props: ThreadHistoryProps) {
       >
         <SheetTitle>
           <TighterText className="px-2 text-lg text-gray-600">
-            Chat History
+            历史记录
           </TighterText>
         </SheetTitle>
 
@@ -266,7 +266,7 @@ export function ThreadHistoryComponent(props: ThreadHistoryProps) {
             ))}
           </div>
         ) : !userThreads.length ? (
-          <p className="px-3 text-gray-500">No items found in history.</p>
+          <p className="px-3 text-gray-500">没有历史记录</p>
         ) : (
           <ThreadsList groupedThreads={groupedThreads} />
         )}
