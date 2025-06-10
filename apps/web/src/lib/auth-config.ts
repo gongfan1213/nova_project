@@ -1,7 +1,7 @@
 import { User, Session } from "@supabase/supabase-js";
 
 // 是否跳过登录验证的配置
-export const SKIP_AUTH = process.env.NEXT_PUBLIC_SKIP_AUTH === "true" || true; // 默认启用跳过登录
+export const SKIP_AUTH = process.env.NEXT_PUBLIC_SKIP_AUTH === "true" || false; // 默认启用跳过登录
 
 // 默认模拟用户信息
 export const DEFAULT_MOCK_USER: User = {
