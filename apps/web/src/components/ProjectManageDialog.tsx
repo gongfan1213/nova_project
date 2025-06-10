@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
+import { createSupabaseClient } from "@/lib/supabase/client";
+
+const USER_ID = "f53ad801-aeef-4d39-9dbc-4042717ee508";
 
 interface Project {
   id: string;
@@ -15,12 +18,14 @@ interface Project {
 
 interface ProjectManageDialogProps {
   projects: Project[];
-  onDeleteProjects: (projectIds: string[]) => void;
+  onProjectsChanged?: () => void;
 }
 
-const ProjectManageDialog = ({ projects, onDeleteProjects }: ProjectManageDialogProps) => {
+const ProjectManageDialog = ({ projects, onProjectsChanged }: ProjectManageDialogProps) => {
   const [open, setOpen] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const supabase = createSupabaseClient();
 
   const handleSelectAll = () => {
     if (selectedProjects.length === projects.length) {
@@ -38,11 +43,14 @@ const ProjectManageDialog = ({ projects, onDeleteProjects }: ProjectManageDialog
     );
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedProjects.length > 0) {
-      onDeleteProjects(selectedProjects);
+      setLoading(true);
+      await supabase.from("projects").delete().in("id", selectedProjects);
+      setLoading(false);
       setSelectedProjects([]);
       setOpen(false);
+      onProjectsChanged && onProjectsChanged();
     }
   };
 
@@ -69,14 +77,13 @@ const ProjectManageDialog = ({ projects, onDeleteProjects }: ProjectManageDialog
             <Button 
               variant="destructive" 
               size="sm"
-              disabled={selectedProjects.length === 0}
+              disabled={selectedProjects.length === 0 || loading}
               onClick={handleDelete}
             >
               <Trash2 size={14} className="mr-1" />
               删除选中 ({selectedProjects.length})
             </Button>
           </div>
-          
           <div className="max-h-[300px] overflow-y-auto space-y-2">
             {projects.map((project) => (
               <div key={project.id} className="flex items-center space-x-3 p-3 border rounded-lg">

@@ -4,26 +4,42 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { createSupabaseClient } from "@/lib/supabase/client";
+
+const USER_ID = "f53ad801-aeef-4d39-9dbc-4042717ee508";
 
 interface NewProjectDialogProps {
-  onAddProject: (title: string, description: string, category: string) => void;
+  onProjectCreated?: () => void;
   availableTags: string[];
-  onAddTag: (tag: string) => void;
 }
 
-const NewProjectDialog = ({ onAddProject, availableTags, onAddTag }: NewProjectDialogProps) => {
+const NewProjectDialog = ({ onProjectCreated, availableTags }: NewProjectDialogProps) => {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [loading, setLoading] = useState(false);
+  const supabase = createSupabaseClient();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (title.trim() && description.trim() && category) {
-      onAddProject(title.trim(), description.trim(), category);
+      setLoading(true);
+      await supabase.from("projects").insert([
+        {
+          title: title.trim(),
+          description: description.trim(),
+          content: description.trim(),
+          status: "草稿",
+          category,
+          user_id: USER_ID,
+        },
+      ]);
+      setLoading(false);
       setTitle("");
       setDescription("");
       setCategory("");
       setOpen(false);
+      onProjectCreated && onProjectCreated();
     }
   };
 
@@ -48,6 +64,7 @@ const NewProjectDialog = ({ onAddProject, availableTags, onAddTag }: NewProjectD
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="请输入项目标题"
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -60,13 +77,14 @@ const NewProjectDialog = ({ onAddProject, availableTags, onAddTag }: NewProjectD
               onChange={(e) => setDescription(e.target.value)}
               placeholder="请输入项目描述"
               className="min-h-[100px]"
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
             <label htmlFor="category" className="text-sm font-medium">
               项目分类
             </label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={category} onValueChange={setCategory} disabled={loading}>
               <SelectTrigger>
                 <SelectValue placeholder="请选择项目分类" />
               </SelectTrigger>
@@ -81,10 +99,10 @@ const NewProjectDialog = ({ onAddProject, availableTags, onAddTag }: NewProjectD
           </div>
         </div>
         <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             取消
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={loading}>
             创建
           </Button>
         </div>
