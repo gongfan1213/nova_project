@@ -588,21 +588,344 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // 新增：处理重写划线编辑的函数
+  const streamRewriteHighlightedText = async (params: GraphInput) => {
+    // if (!conversationId) {
+    //   toast({
+    //     title: "Error",
+    //     description: "No conversation ID found. Please start a new conversation.",
+    //     variant: "destructive",
+    //     duration: 5000,
+    //   });
+    //   return;
+    // }
+
+    setFirstTokenReceived(false);
+    setError(false);
+    setIsStreaming(true);
+    setRunId(undefined);
+    setFeedbackSubmitted(false);
+    
+    try {
+      // 第一步：调用generateArtifact API，传入conversation_id
+      const userQuery =
+        params.messages && params.messages.length > 0
+          ? params.messages[params.messages.length - 1]?.content || ""
+          : "";
+
+      const generateResponse = await fetch(
+        "/api/dify/update-highlighted-text",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputs: {
+              artifact: params?.highlightedText?.fullMarkdown,
+              block: params?.highlightedText?.markdownBlock,
+              highlightedText: params?.highlightedText?.selectedText,
+              text: userQuery,
+            },
+            query: userQuery,
+            response_mode: "streaming",
+            user: "7f7f7d0d-7cbe-4183-9353-787e74cc6b9f",
+          }),
+        }
+      );
+
+      // const PROMPT = `You are an expert AI writing assistant, tasked with rewriting some text a user has selected. The selected text is nested inside a larger 'block'. You should always respond with ONLY the updated text block in accordance with the user's request.
+      // You should always respond with the full markdown text block, as it will simply replace the existing block in the artifact.
+      // The blocks will be joined later on, so you do not need to worry about the formatting of the blocks, only make sure you keep the formatting and structure of the block you are updating.
+
+      // # Selected text
+      // {highlightedText}
+
+      // # Text block
+      // {textBlocks}
+
+      // Your task is to rewrite the sourounding content to fulfill the users request. The selected text content you are provided above has had the markdown styling removed, so you can focus on the text itself.
+      // However, ensure you ALWAYS respond with the full markdown text block, including any markdown syntax.
+      // NEVER wrap your response in any additional markdown syntax, as this will be handled by the system. Do NOT include a triple backtick wrapping the text block, unless it was present in the original text block.
+      // You should NOT change anything EXCEPT the selected text. The ONLY instance where you may update the sourounding text is if it is necessary to make the selected text make sense.
+      // You should ALWAYS respond with the full, updated text block, including any formatting, e.g newlines, indents, markdown syntax, etc. NEVER add extra syntax or formatting unless the user has specifically requested it.
+      // If you observe partial markdown, this is OKAY because you are only updating a partial piece of the text.
+
+      // Ensure you reply with the FULL text block, including the updated selected text. NEVER include only the updated selected text, or additional prefixes or suffixes.
+      // `;
+
+      // const selectedText: string = params?.highlightedText?.selectedText || "";
+      // const markdownBlock: string =
+      //   params?.highlightedText?.markdownBlock || "";
+      // const formattedPrompt = PROMPT.replace(
+      //   "{highlightedText}",
+      //   selectedText
+      // ).replace("{textBlocks}", markdownBlock);
+
+      // const generateResponse = await fetch("/api/dify/generate-artifact", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     query: formattedPrompt,
+      //     conversation_id: conversationId,
+      //   }),
+      // });
+
+      if (!generateResponse.ok) {
+        throw new Error("Failed to rewrite artifact");
+      }
+
+      const reader = generateResponse.body?.getReader();
+      const decoder = new TextDecoder();
+
+      // 用于处理增量更新的变量
+      const highlightedText = params.highlightedText;
+      const prevCurrentContent = artifact
+        ? artifact.contents.find((a) => a.index === artifact.currentIndex)
+        : undefined;
+      const newArtifactIndex = artifact ? artifact.contents.length + 1 : 1;
+      let updatedArtifactStartContent: string | undefined = undefined;
+      let updatedArtifactRestContent: string | undefined = undefined;
+      let isFirstUpdate = true;
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+          console.log("hans-web-chunk", chunk);
+
+          for (const line of lines) {
+            if (line.trim() && line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.event === "message" && data.answer) {
+                  // 模拟 langgraphNode === "updateHighlightedText" 的处理逻辑
+                  const partialUpdatedContent = data.answer;
+
+                  if (!artifact) {
+                    console.error(
+                      "No artifacts found when updating highlighted markdown..."
+                    );
+                    continue;
+                  }
+
+                  if (!highlightedText) {
+                    toast({
+                      title: "Error",
+                      description: "No highlighted text found",
+                      variant: "destructive",
+                      duration: 5000,
+                    });
+                    continue;
+                  }
+
+                  if (!prevCurrentContent) {
+                    toast({
+                      title: "Error",
+                      description: "Original artifact not found",
+                      variant: "destructive",
+                      duration: 5000,
+                    });
+                    return;
+                  }
+
+                  if (!isArtifactMarkdownContent(prevCurrentContent)) {
+                    toast({
+                      title: "Error",
+                      description: "Received non markdown block update",
+                      variant: "destructive",
+                      duration: 5000,
+                    });
+                    return;
+                  }
+
+                  const startIndexOfHighlightedText =
+                    highlightedText.fullMarkdown.indexOf(
+                      highlightedText.markdownBlock
+                    );
+
+                  if (
+                    updatedArtifactStartContent === undefined &&
+                    updatedArtifactRestContent === undefined
+                  ) {
+                    // Initialize the start and rest content on first chunk
+                    updatedArtifactStartContent =
+                      highlightedText.fullMarkdown.slice(
+                        0,
+                        startIndexOfHighlightedText
+                      );
+                    updatedArtifactRestContent =
+                      highlightedText.fullMarkdown.slice(
+                        startIndexOfHighlightedText +
+                          highlightedText.markdownBlock.length
+                      );
+                  }
+
+                  if (
+                    updatedArtifactStartContent !== undefined &&
+                    updatedArtifactRestContent !== undefined
+                  ) {
+                    updatedArtifactStartContent += partialUpdatedContent;
+                  }
+
+                  const firstUpdateCopy = isFirstUpdate;
+                  if (!firstTokenReceived) {
+                    setFirstTokenReceived(true);
+                  }
+
+                  setArtifact((prev) => {
+                    if (!prev) {
+                      throw new Error(
+                        "No artifact found when updating markdown"
+                      );
+                    }
+                    return updateHighlightedMarkdown(
+                      prev,
+                      `${updatedArtifactStartContent}${updatedArtifactRestContent}`,
+                      newArtifactIndex,
+                      prevCurrentContent,
+                      firstUpdateCopy
+                    );
+                  });
+
+                  if (isFirstUpdate) {
+                    isFirstUpdate = false;
+                  }
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+      }
+
+      // 第二步：调用generateFollowup API
+      const chatHistory = params.messages
+        ? params.messages
+            .map((msg) => `${msg.constructor.name}: ${msg.content}`)
+            .join("\n")
+        : "";
+
+      const followupResponse = await fetch("/api/dify/generate-followup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          artifact: params?.highlightedText?.fullMarkdown,
+          query: chatHistory,
+        }),
+      });
+
+      if (!followupResponse.ok) {
+        throw new Error("Failed to generate followup");
+      }
+
+      const followupReader = followupResponse.body?.getReader();
+      let followupContent = "";
+      const followupMessageId = `followup-${uuidv4()}`;
+
+      if (followupReader) {
+        while (true) {
+          const { done, value } = await followupReader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.trim() && line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.event === "message" && data.answer) {
+                  followupContent += data.answer;
+
+                  // 追加新的聊天消息（不覆盖）
+                  const followupMessage = new AIMessage({
+                    id: followupMessageId,
+                    content: followupContent,
+                  });
+
+                  setMessages((prevMessages) => {
+                    const existingIndex = prevMessages.findIndex(
+                      (msg) => msg.id === followupMessageId
+                    );
+                    if (existingIndex >= 0) {
+                      // 更新已存在的消息内容
+                      const newMessages = [...prevMessages];
+                      newMessages[existingIndex] = followupMessage;
+                      return newMessages;
+                    } else {
+                      // 追加新消息
+                      return [...prevMessages, followupMessage];
+                    }
+                  });
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error in rewrite artifact:", error);
+      toast({
+        title: "Error rewriting artifact",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+        duration: 5000,
+      });
+      setError(true);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+  
   // 修改原来的streamMessage函数，添加条件判断
   const streamMessageV2 = async (params: GraphInput) => {
     // 判断是否为第一次生成新artifact的情况
+
     if (!artifact && params.messages && params.messages.length > 0) {
       // 第一种交互模式：第一次生成新artifact
       return streamFirstTimeGeneration(params);
     }
     
     // 判断是否为重写artifact的情况
-    if (artifact && params.messages && params.messages.length > 0 && conversationId) {
+    if (
+      !params.highlightedText &&
+      artifact &&
+      params.messages &&
+      params.messages.length > 0 &&
+      conversationId
+    ) {
       // 重写artifact的交互模式
       return streamRewriteArtifact(params);
     }
 
+    if (params.highlightedText) {
+      return streamRewriteHighlightedText(params);
+    }
+    if (
+      !params.highlightedText &&
+      artifact &&
+      params.messages &&
+      params.messages.length > 0 &&
+      selectedBlocks
+    ) {
+      params.highlightedText = selectedBlocks;
+      // 划线编辑
+      return streamRewriteHighlightedText(params);
+    }
+
     // 原有的其他交互模式逻辑保持不变
+
     setFirstTokenReceived(false);
     setError(false);
     if (!assistantsData.selectedAssistant) {
@@ -1010,7 +1333,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
             }
 
             if (
-              langgraphNode === "rewriteArtifact" &&
+              langgraphNode === "rewriteArtifact" &&  
               taskName === "rewrite_artifact_model_call" &&
               rewriteArtifactMeta
             ) {

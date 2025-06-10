@@ -143,14 +143,22 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
   }, []);
 
   const handleSubmit = async (content: string) => {
+    // 这个是 highlightedText 的 submit
     const humanMessage = new HumanMessage({
       content,
       id: uuidv4(),
     });
 
+
     setMessages((prevMessages) => [...prevMessages, humanMessage]);
     handleCleanupState();
     await streamMessage({
+      // 
+      highlightedText: {
+        fullMarkdown: artifactContentRef.current?.innerText || "",
+        markdownBlock: selectionBox?.text || "",
+        selectedText: selectionBox?.text || "",
+      },
       messages: [convertToOpenAIFormat(humanMessage)],
       ...(selectionIndexes && {
         highlightedCode: {
