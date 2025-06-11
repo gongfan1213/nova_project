@@ -1,6 +1,7 @@
 import { convertToOpenAIFormat } from "@/lib/convert_messages";
 import { cn } from "@/lib/utils";
 import {
+  ArtifactV3,
   ArtifactCodeV3,
   ArtifactMarkdownV3,
   ProgrammingLanguageOptions,
@@ -152,10 +153,17 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
 
     setMessages((prevMessages) => [...prevMessages, humanMessage]);
     handleCleanupState();
+    // console.log('hans-fullMarkdown', artifactContentRef.current?.innerText);
+    // console.log(
+    //   "hans-getArtifactContent(artifact)",
+    //   getArtifactContent(artifact as ArtifactV3)
+    // );
+    const currentArtifact: any = getArtifactContent(artifact as ArtifactV3);
+    
     await streamMessage({
-      // 
+      //
       highlightedText: {
-        fullMarkdown: artifactContentRef.current?.innerText || "",
+        fullMarkdown: currentArtifact?.fullMarkdown || "",
         markdownBlock: selectionBox?.text || "",
         selectedText: selectionBox?.text || "",
       },
@@ -314,7 +322,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
     isStreaming;
 
   return (
-    <div className="relative w-full h-full max-h-screen overflow-auto">
+    <div className="relative w-full h-[calc(100vh-64px)] max-h-screen overflow-auto">
       <ArtifactHeader
         isArtifactSaved={isArtifactSaved}
         isBackwardsDisabled={isBackwardsDisabled}

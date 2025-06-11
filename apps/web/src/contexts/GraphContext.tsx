@@ -3,32 +3,20 @@
 import { v4 as uuidv4 } from "uuid";
 import { useUserContext } from "@/contexts/UserContext";
 import {
-  isArtifactCodeContent,
   isArtifactMarkdownContent,
   isDeprecatedArtifactType,
 } from "@opencanvas/shared/utils/artifacts";
 import { reverseCleanContent } from "@/lib/normalize_string";
 import {
-  ArtifactType,
   ArtifactV3,
   CustomModelConfig,
   GraphInput,
-  ProgrammingLanguageOptions,
-  RewriteArtifactMetaToolResponse,
-  SearchResult,
   TextHighlight,
 } from "@opencanvas/shared/types";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
-import { useRuns } from "@/hooks/useRuns";
 import { WEB_SEARCH_RESULTS_QUERY_PARAM } from "@/constants";
 import {
-  DEFAULT_INPUTS,
-  OC_WEB_SEARCH_RESULTS_MESSAGE_KEY,
-} from "@opencanvas/shared/constants";
-import {
   ALL_MODEL_NAMES,
-  NON_STREAMING_TEXT_MODELS,
-  NON_STREAMING_TOOL_CALLING_MODELS,
   DEFAULT_MODEL_CONFIG,
   DEFAULT_MODEL_NAME,
 } from "@opencanvas/shared/models";
@@ -45,22 +33,11 @@ import {
 } from "react";
 import {
   convertToArtifactV3,
-  extractChunkFields,
-  handleGenerateArtifactToolCallChunk,
-  removeCodeBlockFormatting,
-  replaceOrInsertMessageChunk,
-  updateHighlightedCode,
   updateHighlightedMarkdown,
-  updateRewrittenArtifact,
 } from "./utils";
-import {
-  handleRewriteArtifactThinkingModel,
-  isThinkingModel,
-} from "@opencanvas/shared/utils/thinking";
 import { debounce } from "lodash";
 import { useThreadContext } from "./ThreadProvider";
 import { useAssistantContext } from "./AssistantContext";
-import { StreamWorkerService } from "@/workers/graph-stream/streamWorker";
 import { useQueryState } from "nuqs";
 import { Thread, createSupabaseClient } from "@/lib/supabase-thread-client";
 
@@ -106,27 +83,13 @@ type GraphContentType = {
 
 const GraphContext = createContext<GraphContentType | undefined>(undefined);
 
-// Shim for recent LangGraph bugfix
-function extractStreamDataChunk(chunk: any) {
-  if (Array.isArray(chunk)) {
-    return chunk[1];
-  }
-  return chunk;
-}
 
-function extractStreamDataOutput(output: any) {
-  if (Array.isArray(output)) {
-    return output[1];
-  }
-  return output;
-}
 
 export function GraphProvider({ children }: { children: ReactNode }) {
   const userData = useUserContext();
   const assistantsData = useAssistantContext();
   const threadData = useThreadContext();
   const { toast } = useToast();
-  const { shareRun } = useRuns();
   const [chatStarted, setChatStarted] = useState(false);
   const [messages, setMessages] = useState<BaseMessage[]>([]);
   const [artifact, setArtifact] = useState<ArtifactV3>();
@@ -151,9 +114,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [artifactUpdateFailed, setArtifactUpdateFailed] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(false);
 
-  const [_, setWebSearchResultsId] = useQueryState(
-    WEB_SEARCH_RESULTS_QUERY_PARAM
-  );
+  const [_] = useQueryState(WEB_SEARCH_RESULTS_QUERY_PARAM);
 
   useEffect(() => {
     if (typeof window === "undefined" || !userData.user) return;
@@ -186,34 +147,40 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   }, [debouncedAPIUpdate]);
 
   useEffect(() => {
-    if (!threadData.threadId) return;
-    if (!messages.length || !artifact) return;
-    if (updateRenderedArtifactRequired || threadSwitched || isStreaming) return;
+    // 如果没有 threadId，或者正在流式传输，或者线程刚切换，则不执行
+    if (!threadData.threadId || isStreaming || threadSwitched) return;
+    
+    // 如果没有 artifact，不需要保存
+    if (!artifact) return;
+    
+    // 如果需要更新渲染状态，等待渲染完成后再保存
+    if (updateRenderedArtifactRequired) return;
+    
     const currentIndex = artifact.currentIndex;
     const currentContent = artifact.contents.find(
       (c) => c.index === currentIndex
     );
     if (!currentContent) return;
+    
+    // 如果 artifact 内容为空，不保存
     if (
       (artifact.contents.length === 1 &&
         artifact.contents[0].type === "text" &&
         !artifact.contents[0].fullMarkdown) ||
       (artifact.contents[0].type === "code" && !artifact.contents[0].code)
     ) {
-      // If the artifact has only one content and it's empty, we shouldn't update the state
       return;
     }
 
+    // 只有当 artifact 内容真正发生变化时才保存
     if (
       !lastSavedArtifact.current ||
-      lastSavedArtifact.current.contents !== artifact.contents
+      JSON.stringify(lastSavedArtifact.current.contents) !== JSON.stringify(artifact.contents)
     ) {
       setIsArtifactSaved(false);
-      // This means the artifact in state does not match the last saved artifact
-      // We need to update
       debouncedAPIUpdate(artifact, threadData.threadId);
     }
-  }, [artifact, threadData.threadId]);
+  }, [artifact, threadData.threadId, isStreaming, threadSwitched, updateRenderedArtifactRequired]);
 
   const searchOrCreateEffectRan = useRef(false);
 
@@ -243,7 +210,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       // Failed to fetch thread. Remove from query params
       threadData.setThreadId(null);
     });
-  }, [threadData.threadId, userData.user]);
+  }, [threadData.threadId, userData.user, threadData.createThreadLoading]);
 
   const updateArtifact = async (
     artifactToUpdate: ArtifactV3,
@@ -719,7 +686,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
             },
             query: userQuery,
             response_mode: "streaming",
-            user: "7f7f7d0d-7cbe-4183-9353-787e74cc6b9f",
+            user: userData?.user?.id,
           }),
         }
       );
@@ -828,6 +795,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                   if (!firstTokenReceived) {
                     setFirstTokenReceived(true);
                   }
+                  
+                  console.log("hans-web-updatedArtifactStartContent", `${updatedArtifactStartContent}${updatedArtifactRestContent}`);
 
                   setArtifact((prev) => {
                     if (!prev) {
@@ -835,6 +804,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                         "No artifact found when updating markdown"
                       );
                     }
+
                     return updateHighlightedMarkdown(
                       prev,
                       `${updatedArtifactStartContent}${updatedArtifactRestContent}`,
@@ -961,12 +931,14 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       isNewThread = true;
     }
 
-
     // 判断是否为重写artifact的情况
     // 检查当前 Thread 是否有 conversation_id（表示已有对话）
+    // 优化：只在需要时获取线程信息，避免频繁调用API
     let hasConversationId = false;
     let conversationId = undefined;
-    if (currentThreadId) {
+    
+    // 只有在有artifact且没有highlightedText时才需要检查conversation_id
+    if (currentThreadId && artifact && !params.highlightedText && params.messages && params.messages.length > 0) {
       try {
         const currentThread = await threadData.getThread(currentThreadId);
         conversationId = currentThread?.metadata?.conversation_id;
