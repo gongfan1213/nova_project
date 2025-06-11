@@ -40,34 +40,86 @@ export async function PUT(
       if (values.artifact) {
         const artifact = values.artifact
 
-        // 查找或创建 Artifact 记录
+        // 查找或创建 Artifact 记录，同时获取现有的 contents
         const { data: existingArtifact } = await supabase
           .from('artifacts')
-          .select('id, current_index')
+          .select(`
+            id, 
+            current_index,
+            artifact_contents (
+              index,
+              type,
+              title,
+              language,
+              code,
+              full_markdown
+            )
+          `)
           .eq('thread_id', id)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
 
         let artifactId: string
+        let newCurrentIndex: number
 
         if (existingArtifact) {
-          // 更新现有 Artifact
-          const { data: updatedArtifact, error: updateError } = await supabase
+          artifactId = existingArtifact.id
+          
+          // 获取现有 contents 的最大 index
+          const existingContents = existingArtifact.artifact_contents || []
+          const maxExistingIndex = existingContents.length > 0 
+            ? Math.max(...existingContents.map((c: any) => c.index)) 
+            : 0
+
+          console.log(`Existing artifact found with ${existingContents.length} contents, max index: ${maxExistingIndex}`)
+
+          if (artifact.contents && Array.isArray(artifact.contents) && artifact.contents.length > 0) {
+            // 如果有现有内容，需要追加新的内容并递增 index
+            let nextIndex = maxExistingIndex + 1
+            
+            // 处理新的 contents，为每个分配新的递增 index
+            const contentsToInsert = artifact.contents.map((content: any) => ({
+              artifact_id: artifactId,
+              index: nextIndex++, // 使用递增的 index
+              type: content.type,
+              title: content.title,
+              language: content.language || null,
+              code: content.code || null,
+              full_markdown: content.fullMarkdown || null,
+            }))
+
+            console.log(`Inserting ${contentsToInsert.length} new contents with indices ${maxExistingIndex + 1} to ${nextIndex - 1}`)
+
+            const { error: contentsError } = await supabase
+              .from('artifact_contents')
+              .insert(contentsToInsert)
+
+            if (contentsError) {
+              throw new Error(`Failed to insert artifact contents: ${contentsError.message}`)
+            }
+
+            // 设置新的 current_index 为最新添加的内容的 index
+            newCurrentIndex = nextIndex - 1
+          } else {
+            // 如果没有新内容要添加，保持当前 index
+            newCurrentIndex = artifact.currentIndex || existingArtifact.current_index
+          }
+
+          // 更新 Artifact 的 current_index
+          const { error: updateError } = await supabase
             .from('artifacts')
             .update({
-              current_index: artifact.currentIndex || existingArtifact.current_index,
+              current_index: newCurrentIndex,
               updated_at: new Date().toISOString(),
             })
             .eq('id', existingArtifact.id)
-            .select('id')
-            .single()
 
           if (updateError) {
             throw new Error(`Failed to update artifact: ${updateError.message}`)
           }
 
-          artifactId = updatedArtifact.id
+          console.log(`Updated artifact current_index to: ${newCurrentIndex}`)
         } else {
           // 创建新 Artifact
           const { data: newArtifact, error: createError } = await supabase
@@ -75,7 +127,7 @@ export async function PUT(
             .insert({
               thread_id: id,
               user_id: authRes.user.id,
-              current_index: artifact.currentIndex || 1,
+              current_index: 1, // 新创建的 artifact 从 index 1 开始
             })
             .select('id')
             .single()
@@ -85,34 +137,41 @@ export async function PUT(
           }
 
           artifactId = newArtifact.id
-        }
 
-        // 处理 Artifact Contents
-        if (artifact.contents && Array.isArray(artifact.contents)) {
-          // 删除现有的 contents（如果是完全替换）
-          await supabase
-            .from('artifact_contents')
-            .delete()
-            .eq('artifact_id', artifactId)
+          // 处理 Artifact Contents（新 artifact，从 index 1 开始）
+          if (artifact.contents && Array.isArray(artifact.contents)) {
+            const contentsToInsert = artifact.contents.map((content: any, idx: number) => ({
+              artifact_id: artifactId,
+              index: idx + 1, // 从 1 开始编号
+              type: content.type,
+              title: content.title,
+              language: content.language || null,
+              code: content.code || null,
+              full_markdown: content.fullMarkdown || null,
+            }))
 
-          // 插入新的 contents
-          const contentsToInsert = artifact.contents.map((content: any) => ({
-            artifact_id: artifactId,
-            index: content.index,
-            type: content.type,
-            title: content.title,
-            language: content.language || null,
-            code: content.code || null,
-            full_markdown: content.fullMarkdown || null,
-          }))
+            console.log(`Creating new artifact with ${contentsToInsert.length} contents`)
 
-          if (contentsToInsert.length > 0) {
-            const { error: contentsError } = await supabase
-              .from('artifact_contents')
-              .insert(contentsToInsert)
+            if (contentsToInsert.length > 0) {
+              const { error: contentsError } = await supabase
+                .from('artifact_contents')
+                .insert(contentsToInsert)
 
-            if (contentsError) {
-              throw new Error(`Failed to insert artifact contents: ${contentsError.message}`)
+              if (contentsError) {
+                throw new Error(`Failed to insert artifact contents: ${contentsError.message}`)
+              }
+
+              // 更新 current_index 为最后一个内容的 index
+              const { error: updateIndexError } = await supabase
+                .from('artifacts')
+                .update({
+                  current_index: contentsToInsert.length,
+                })
+                .eq('id', artifactId)
+
+              if (updateIndexError) {
+                throw new Error(`Failed to update artifact current_index: ${updateIndexError.message}`)
+              }
             }
           }
         }

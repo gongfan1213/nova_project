@@ -1009,7 +1009,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           saveThreadAfterConversation(currentThreadId, params, {
             messages: currentMessages as BaseMessage[],
             artifact: currentArtifact as ArtifactV3,
-            conversationId: conversationId,
           });
           return currentArtifact;
         });

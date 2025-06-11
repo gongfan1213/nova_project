@@ -122,12 +122,46 @@ if (conversationIdToSave) {
 - **状态管理**：使用 React 状态回调函数获取最新状态
 - **错误处理**：完善的错误处理和用户反馈
 
+### 13. Artifact 版本控制修复 (重要!)
+发现并修复了 PUT `/api/thread/[id]/state` 中的严重问题：
+
+**问题：**
+- 直接删除所有现有 artifact_contents 然后插入新的，导致历史版本丢失
+- currentIndex 没有正确递增
+- 不支持版本追加，而是完全替换
+
+**修复：**
+- 查询时同时获取现有的 artifact_contents
+- 新 contents 从 `maxExistingIndex + 1` 开始递增编号
+- 保留历史版本，只追加新版本
+- 正确更新 `current_index` 指向最新版本
+
+**核心逻辑：**
+```typescript
+// 计算现有 contents 的最大 index
+const maxExistingIndex = existingContents.length > 0 
+  ? Math.max(...existingContents.map(c => c.index)) 
+  : 0
+
+// 新 contents 从下一个 index 开始
+let nextIndex = maxExistingIndex + 1
+const contentsToInsert = artifact.contents.map(content => ({
+  artifact_id: artifactId,
+  index: nextIndex++, // 递增编号
+  // ... 其他字段
+}))
+
+// 更新 current_index 为最新版本
+newCurrentIndex = nextIndex - 1
+```
+
 ## 当前状态
 - ✅ 数据库迁移：完成
 - ✅ API 更新：完成  
 - ✅ 函数签名更新：完成
 - ✅ 最新状态获取问题：已修复
 - ✅ 新线程逻辑：已优化
+- ✅ Artifact 版本控制：已修复
 - ✅ 测试验证：测试页面已更新
 
 ## 待测试功能
@@ -135,5 +169,9 @@ if (conversationIdToSave) {
 2. 划线编辑功能是否正确保存最新的 messages 和 artifact  
 3. conversation_id 是否正确保存到数据库
 4. 新线程和已有线程的处理逻辑是否正确
+5. **Artifact 版本控制是否正确工作（历史版本保留、index 递增）**
 
-核心修复已完成，现在 `saveThreadAfterConversation` 应该能够获取到最新的 messages 和 artifact 状态。 
+核心修复已完成。现在系统应该能够：
+- 获取最新的 messages 和 artifact 状态
+- 正确追加 artifact 版本而不丢失历史
+- 正确管理 conversation_id 
