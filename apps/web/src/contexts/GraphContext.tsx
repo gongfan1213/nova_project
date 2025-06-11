@@ -62,6 +62,13 @@ import { StreamWorkerService } from "@/workers/graph-stream/streamWorker";
 import { useQueryState } from "nuqs";
 import { Thread, createSupabaseClient } from "@/lib/supabase-thread-client";
 
+// 定义对话数据类型
+interface ThreadData {
+  messages: BaseMessage[];
+  artifact?: ArtifactV3;
+  conversationId?: string;
+}
+
 interface GraphData {
   runId: string | undefined;
   isStreaming: boolean;
@@ -268,12 +275,31 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   };
 
   // 新增：处理第一种交互模式的函数
-  const streamFirstTimeGeneration = async (params: GraphInput) => {
+  const streamFirstTimeGeneration = async (params: GraphInput): Promise<ThreadData> => {
     setFirstTokenReceived(false);
     setError(false);
     setIsStreaming(true);
     setRunId(undefined);
     setFeedbackSubmitted(false);
+
+    // 初始化返回数据
+    // 从当前状态获取初始消息，确保包含用户输入
+    let finalMessages: BaseMessage[] = [...messages];
+    
+    // 如果有新的用户消息需要添加，确保它们包含必要的内容
+    if (params.messages && params.messages.length > 0) {
+      const lastMessage = params.messages[params.messages.length - 1];
+      if (lastMessage && typeof lastMessage === 'object' && 'content' in lastMessage) {
+        // 确保消息有有效的内容
+        const messageContent = lastMessage.content || '';
+        if (messageContent.trim()) {
+          finalMessages = [...messages, lastMessage as BaseMessage];
+        }
+      }
+    }
+    
+    let finalArtifact: ArtifactV3 | undefined;
+    let finalConversationId: string | undefined;
 
     try {
       // 第一步：调用generateArtifact API
@@ -317,6 +343,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                   if (data.conversation_id && !receivedConversationId) {
                     receivedConversationId = data.conversation_id;
                     setConversationId(receivedConversationId);
+                    finalConversationId = receivedConversationId;
                   }
                   
                   if (data.answer) {
@@ -337,6 +364,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                       setFirstTokenReceived(true);
                     }
                     setArtifact(newArtifact);
+                    finalArtifact = newArtifact;
                   }
                 }
               } catch (e) {
@@ -392,16 +420,38 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                     content: followupContent,
                   });
                   
+                  // 更新 UI 状态
                   setMessages((prevMessages) => {
                     const existingIndex = prevMessages.findIndex(msg => msg.id === followupMessageId);
+                    let newMessages: BaseMessage[];
                     if (existingIndex >= 0) {
-                      const newMessages = [...prevMessages];
+                      newMessages = [...prevMessages];
                       newMessages[existingIndex] = followupMessage;
-                      return newMessages;
                     } else {
-                      return [...prevMessages, followupMessage];
+                      newMessages = [...prevMessages, followupMessage];
                     }
+                    return newMessages;
                   });
+                  
+                  // 更新要返回的最终消息列表
+                  const existingIndex = finalMessages.findIndex(msg => msg.id === followupMessageId);
+                  if (existingIndex >= 0) {
+                    // 直接更新现有消息的内容
+                    finalMessages[existingIndex] = followupMessage;
+                    console.log('Updated existing followup message in finalMessages', {
+                      index: existingIndex,
+                      contentLength: followupContent.length,
+                      totalMessages: finalMessages.length
+                    });
+                  } else {
+                    // 只在第一次添加消息时添加到数组
+                    finalMessages.push(followupMessage);
+                    console.log('Added new followup message to finalMessages', {
+                      messageId: followupMessageId,
+                      contentLength: followupContent.length,
+                      totalMessages: finalMessages.length
+                    });
+                  }
                 }
               } catch (e) {
                 // 忽略解析错误
@@ -423,6 +473,21 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsStreaming(false);
     }
+
+    // 确保最终消息列表包含所有必要的消息
+    console.log('Final messages to return:', finalMessages.map(m => ({
+      constructor: m?.constructor?.name,
+      content: typeof m?.content === 'string' ? m.content.substring(0, 50) + '...' : 'not-string',
+      contentType: typeof m?.content,
+      hasValidContent: !!(m?.content && typeof m.content === 'string' && m.content.trim())
+    })));
+
+    // 返回收集的对话数据
+    return {
+      messages: finalMessages,
+      artifact: finalArtifact,
+      conversationId: finalConversationId,
+    };
   };
 
   // 新增：处理重写artifact的函数
@@ -889,11 +954,37 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   
   // 修改原来的streamMessage函数，添加条件判断
   const streamMessageV2 = async (params: GraphInput) => {
-    // 判断是否为第一次生成新artifact的情况
+    let currentThreadId = threadData.threadId;
+    let isNewThread = false;
+    
+    if (!currentThreadId) {
+      const newThread = await threadData.createThread(
+        params?.messages?.[0]?.content?.slice(0, 50) || ""
+      );
+      if (!newThread) {
+        toast({
+          title: "Error",
+          description: "Failed to create thread",
+          variant: "destructive",
+          duration: 5000,
+        });
+        return;
+      }
+      currentThreadId = newThread.thread_id;
+      isNewThread = true;
+    }
 
+    // 判断是否为第一次生成新artifact的情况
     if (!artifact && params.messages && params.messages.length > 0) {
       // 第一种交互模式：第一次生成新artifact
-      return streamFirstTimeGeneration(params);
+      const generatedThreadData = await streamFirstTimeGeneration(params);
+      console.log('Generated thread data:', generatedThreadData);
+      
+      // 对话结束后，如果是新线程，更新 thread 标题和保存完整状态
+      if (isNewThread && currentThreadId) {
+        await saveThreadAfterConversation(currentThreadId, params, generatedThreadData);
+      }
+      return;
     }
     
     // 判断是否为重写artifact的情况
@@ -905,12 +996,25 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       conversationId
     ) {
       // 重写artifact的交互模式
-      return streamRewriteArtifact(params);
+      await streamRewriteArtifact(params);
+      
+      // 对话结束后更新状态
+      if (currentThreadId) {
+        await saveThreadAfterConversation(currentThreadId, params);
+      }
+      return;
     }
 
     if (params.highlightedText) {
-      return streamRewriteHighlightedText(params);
+      await streamRewriteHighlightedText(params);
+      
+      // 对话结束后更新状态
+      if (currentThreadId) {
+        await saveThreadAfterConversation(currentThreadId, params);
+      }
+      return;
     }
+    
     if (
       !params.highlightedText &&
       artifact &&
@@ -920,1040 +1024,82 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     ) {
       params.highlightedText = selectedBlocks;
       // 划线编辑
-      return streamRewriteHighlightedText(params);
-    }
-
-    // 原有的其他交互模式逻辑保持不变
-
-    setFirstTokenReceived(false);
-    setError(false);
-    if (!assistantsData.selectedAssistant) {
-      toast({
-        title: "Error",
-        description: "No assistant ID found",
-        variant: "destructive",
-        duration: 5000,
-      });
-      return;
-    }
-
-    let currentThreadId = threadData.threadId;
-    if (!currentThreadId) {
-      const newThread = await threadData.createThread();
-      if (!newThread) {
-        toast({
-          title: "Error",
-          description: "Failed to create thread",
-          variant: "destructive",
-          duration: 5000,
-        });
-        return;
+      await streamRewriteHighlightedText(params);
+      
+      // 对话结束后更新状态
+      if (currentThreadId) {
+        await saveThreadAfterConversation(currentThreadId, params);
       }
-      currentThreadId = newThread.thread_id;
-    }
-
-    const messagesInput = {
-      // `messages` contains the full, unfiltered list of messages
-      messages: params.messages || [],
-      // `_messages` contains the list of messages which are included
-      // in the LLMs context, including summarization messages.
-      _messages: params.messages || [],
-    };
-
-    // TODO: update to properly pass the highlight data back
-    // one field for highlighted text, and one for code
-    const input = {
-      ...DEFAULT_INPUTS,
-      artifact,
-      ...params,
-      ...messagesInput,
-      ...(selectedBlocks && {
-        highlightedText: selectedBlocks,
-      }),
-      webSearchEnabled: searchEnabled,
-    };
-    // Add check for multiple defined fields
-    const fieldsToCheck = [
-      input.highlightedCode,
-      input.highlightedText,
-      input.language,
-      input.artifactLength,
-      input.regenerateWithEmojis,
-      input.readingLevel,
-      input.addComments,
-      input.addLogs,
-      input.fixBugs,
-      input.portLanguage,
-      input.customQuickActionId,
-    ];
-
-    if (fieldsToCheck.filter((field) => field !== undefined).length >= 2) {
-      toast({
-        title: "Error",
-        description:
-          "Can not use multiple fields (quick actions, highlights, etc.) at once. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      });
       return;
     }
+  };
 
-    setIsStreaming(true);
-    setRunId(undefined);
-    setFeedbackSubmitted(false);
-    // The root level run ID of this stream
-    let runId = "";
-    let followupMessageId = "";
-    // The ID of the message containing the thinking content.
-    let thinkingMessageId = "";
-
+  // 新增：对话结束后保存 Thread 状态的函数
+  const saveThreadAfterConversation = async (threadId: string, params: GraphInput, generatedData?: ThreadData) => {
     try {
-      const workerService = new StreamWorkerService();
-      const stream = workerService.streamData({
-        threadId: currentThreadId,
-        assistantId: assistantsData.selectedAssistant.assistant_id,
-        input,
-        modelName: threadData.modelName,
-        modelConfigs: threadData.modelConfigs,
-      });
+      const client = createSupabaseClient();
+      
+      // 生成对话标题（使用用户的第一个消息）
+      const userMessage = params.messages && params.messages.length > 0 
+        ? params.messages[params.messages.length - 1]?.content || ""
+        : "";
+      
+      // 截取前50个字符作为标题
+      const title = userMessage.length > 50 
+        ? userMessage.substring(0, 47) + "..."
+        : userMessage || "New Conversation";
 
-      // Variables to keep track of content specific to this stream
-      const prevCurrentContent = artifact
-        ? artifact.contents.find((a) => a.index === artifact.currentIndex)
-        : undefined;
+      // 更新 Thread 的状态，包括消息和 artifacts
+      const messagesToSave = generatedData?.messages || messages;
 
-      // The new index of the artifact that is generating
-      let newArtifactIndex = 1;
-      if (artifact) {
-        newArtifactIndex = artifact.contents.length + 1;
-      }
-
-      // The metadata generated when re-writing an artifact
-      let rewriteArtifactMeta: RewriteArtifactMetaToolResponse | undefined =
-        undefined;
-
-      // For generating an artifact
-      let generateArtifactToolCallStr = "";
-
-      // For updating code artifacts
-      // All the text up until the startCharIndex
-      let updatedArtifactStartContent: string | undefined = undefined;
-      // All the text after the endCharIndex
-      let updatedArtifactRestContent: string | undefined = undefined;
-      // Whether or not the first update has been made when updating highlighted code.
-      let isFirstUpdate = true;
-
-      // The full text content of an artifact that is being rewritten.
-      // This may include thinking tokens if the model generates them.
-      let fullNewArtifactContent = "";
-      // The response text ONLY of the artifact that is being rewritten.
-      let newArtifactContent = "";
-
-      // The updated full markdown text when using the highlight update tool
-      let highlightedText: TextHighlight | undefined = undefined;
-
-      // The ID of the message for the web search operation during this turn
-      let webSearchMessageId = "";
-
-      for await (const chunk of stream) {
-        if (chunk.event === "error") {
-          const errorMessage =
-            chunk?.data?.message || "Unknown error. Please try again.";
-          toast({
-            title: "Error generating content",
-            description: errorMessage,
-            variant: "destructive",
-            duration: 5000,
-          });
-          setError(true);
-          setIsStreaming(false);
-          break;
+      // 过滤掉无效的消息（content 为 null 或空）
+      console.log('Messages to save before filtering:', messagesToSave.map(m => ({
+        constructor: m?.constructor?.name,
+        content: m?.content,
+        contentType: typeof m?.content,
+        hasContent: !!m?.content
+      })));
+      
+      const validMessages = messagesToSave.filter(msg => {
+        if (!msg || typeof msg.content !== 'string') {
+          console.warn('Filtering out invalid message:', msg);
+          return false;
         }
-
-        try {
-          const {
-            runId: runId_,
-            event,
-            langgraphNode,
-            nodeInput,
-            nodeChunk,
-            nodeOutput,
-            taskName,
-          } = extractChunkFields(chunk);
-
-          if (!runId && runId_) {
-            runId = runId_;
-            setRunId(runId);
-          }
-
-          if (event === "on_chain_start") {
-            if (langgraphNode === "updateHighlightedText") {
-              highlightedText = nodeInput?.highlightedText;
-            }
-
-            if (langgraphNode === "queryGenerator" && !webSearchMessageId) {
-              webSearchMessageId = `web-search-results-${uuidv4()}`;
-              // The web search is starting. Add a new message.
-              setMessages((prev) => {
-                return [
-                  ...prev,
-                  new AIMessage({
-                    id: webSearchMessageId,
-                    content: "",
-                    additional_kwargs: {
-                      [OC_WEB_SEARCH_RESULTS_MESSAGE_KEY]: true,
-                      webSearchResults: [],
-                      webSearchStatus: "searching",
-                    },
-                  }),
-                ];
-              });
-              // Set the query param to trigger the UI
-              setWebSearchResultsId(webSearchMessageId);
-            }
-          }
-
-          if (event === "on_chat_model_stream") {
-            // These are generating new messages to insert to the chat window.
-            if (
-              ["generateFollowup", "replyToGeneralInput"].includes(
-                langgraphNode
-              )
-            ) {
-              const message = extractStreamDataChunk(nodeChunk);
-              if (!followupMessageId) {
-                followupMessageId = message.id;
-              }
-              setMessages((prevMessages) =>
-                replaceOrInsertMessageChunk(prevMessages, message)
-              );
-            }
-
-            if (langgraphNode === "generateArtifact") {
-              const message = extractStreamDataChunk(nodeChunk);
-
-              // Accumulate content
-              if (
-                message?.tool_call_chunks?.length > 0 &&
-                typeof message?.tool_call_chunks?.[0]?.args === "string"
-              ) {
-                generateArtifactToolCallStr += message.tool_call_chunks[0].args;
-              } else if (
-                message?.content &&
-                typeof message?.content === "string"
-              ) {
-                generateArtifactToolCallStr += message.content;
-              }
-
-              // Process accumulated content with rate limiting
-              const result = handleGenerateArtifactToolCallChunk(
-                generateArtifactToolCallStr
-              );
-
-              if (result) {
-                if (result === "continue") {
-                  continue;
-                } else if (typeof result === "object") {
-                  if (!firstTokenReceived) {
-                    setFirstTokenReceived(true);
-                  }
-                  // Use debounced setter to prevent too frequent updates
-                  setArtifact(result);
-                }
-              }
-            }
-
-            if (langgraphNode === "updateHighlightedText") {
-              const message = extractStreamDataChunk(nodeChunk);
-              if (!message) {
-                continue;
-              }
-              if (!artifact) {
-                console.error(
-                  "No artifacts found when updating highlighted markdown..."
-                );
-                continue;
-              }
-              if (!highlightedText) {
-                toast({
-                  title: "Error",
-                  description: "No highlighted text found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                continue;
-              }
-              if (!prevCurrentContent) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (!isArtifactMarkdownContent(prevCurrentContent)) {
-                toast({
-                  title: "Error",
-                  description: "Received non markdown block update",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              const partialUpdatedContent = message.content || "";
-              const startIndexOfHighlightedText =
-                highlightedText.fullMarkdown.indexOf(
-                  highlightedText.markdownBlock
-                );
-
-              if (
-                updatedArtifactStartContent === undefined &&
-                updatedArtifactRestContent === undefined
-              ) {
-                // Initialize the start and rest content on first chunk
-                updatedArtifactStartContent =
-                  highlightedText.fullMarkdown.slice(
-                    0,
-                    startIndexOfHighlightedText
-                  );
-                updatedArtifactRestContent = highlightedText.fullMarkdown.slice(
-                  startIndexOfHighlightedText +
-                    highlightedText.markdownBlock.length
-                );
-              }
-
-              if (
-                updatedArtifactStartContent !== undefined &&
-                updatedArtifactRestContent !== undefined
-              ) {
-                updatedArtifactStartContent += partialUpdatedContent;
-              }
-
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-                return updateHighlightedMarkdown(
-                  prev,
-                  `${updatedArtifactStartContent}${updatedArtifactRestContent}`,
-                  newArtifactIndex,
-                  prevCurrentContent,
-                  firstUpdateCopy
-                );
-              });
-
-              if (isFirstUpdate) {
-                isFirstUpdate = false;
-              }
-            }
-
-            if (langgraphNode === "updateArtifact") {
-              if (!artifact) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (!params.highlightedCode) {
-                toast({
-                  title: "Error",
-                  description: "No highlighted code found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              const partialUpdatedContent =
-                extractStreamDataChunk(nodeChunk)?.content || "";
-              const { startCharIndex, endCharIndex } = params.highlightedCode;
-
-              if (!prevCurrentContent) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (prevCurrentContent.type !== "code") {
-                toast({
-                  title: "Error",
-                  description: "Received non code block update",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              if (
-                updatedArtifactStartContent === undefined &&
-                updatedArtifactRestContent === undefined
-              ) {
-                updatedArtifactStartContent = prevCurrentContent.code.slice(
-                  0,
-                  startCharIndex
-                );
-                updatedArtifactRestContent =
-                  prevCurrentContent.code.slice(endCharIndex);
-              } else {
-                // One of the above have been populated, now we can update the start to contain the new text.
-                updatedArtifactStartContent += partialUpdatedContent;
-              }
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-                const content = removeCodeBlockFormatting(
-                  `${updatedArtifactStartContent}${updatedArtifactRestContent}`
-                );
-                return updateHighlightedCode(
-                  prev,
-                  content,
-                  newArtifactIndex,
-                  prevCurrentContent,
-                  firstUpdateCopy
-                );
-              });
-
-              if (isFirstUpdate) {
-                isFirstUpdate = false;
-              }
-            }
-
-            if (
-              langgraphNode === "rewriteArtifact" &&  
-              taskName === "rewrite_artifact_model_call" &&
-              rewriteArtifactMeta
-            ) {
-              if (!artifact) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              fullNewArtifactContent +=
-                extractStreamDataChunk(nodeChunk)?.content || "";
-
-              if (isThinkingModel(threadData.modelName)) {
-                if (!thinkingMessageId) {
-                  thinkingMessageId = `thinking-${uuidv4()}`;
-                }
-                newArtifactContent = handleRewriteArtifactThinkingModel({
-                  newArtifactContent: fullNewArtifactContent,
-                  setMessages,
-                  thinkingMessageId,
-                });
-              } else {
-                newArtifactContent = fullNewArtifactContent;
-              }
-
-              // Ensure we have the language to update the artifact with
-              let artifactLanguage = params.portLanguage || undefined;
-              if (
-                !artifactLanguage &&
-                rewriteArtifactMeta.type === "code" &&
-                rewriteArtifactMeta.language
-              ) {
-                // If the type is `code` we should have a programming language populated
-                // in the rewriteArtifactMeta and can use that.
-                artifactLanguage =
-                  rewriteArtifactMeta.language as ProgrammingLanguageOptions;
-              } else if (!artifactLanguage) {
-                artifactLanguage =
-                  (prevCurrentContent?.title as ProgrammingLanguageOptions) ??
-                  "other";
-              }
-
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-
-                let content = newArtifactContent;
-                if (!rewriteArtifactMeta) {
-                  console.error(
-                    "No rewrite artifact meta found when updating artifact"
-                  );
-                  return prev;
-                }
-                if (rewriteArtifactMeta.type === "code") {
-                  content = removeCodeBlockFormatting(content);
-                }
-
-                return updateRewrittenArtifact({
-                  prevArtifact: prev,
-                  newArtifactContent: content,
-                  rewriteArtifactMeta: rewriteArtifactMeta,
-                  prevCurrentContent,
-                  newArtifactIndex,
-                  isFirstUpdate: firstUpdateCopy,
-                  artifactLanguage,
-                });
-              });
-
-              if (isFirstUpdate) {
-                isFirstUpdate = false;
-              }
-            }
-
-            if (
-              [
-                "rewriteArtifactTheme",
-                "rewriteCodeArtifactTheme",
-                "customAction",
-              ].includes(langgraphNode)
-            ) {
-              if (!artifact) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (!prevCurrentContent) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              fullNewArtifactContent +=
-                extractStreamDataChunk(nodeChunk)?.content || "";
-
-              if (isThinkingModel(threadData.modelName)) {
-                if (!thinkingMessageId) {
-                  thinkingMessageId = `thinking-${uuidv4()}`;
-                }
-                newArtifactContent = handleRewriteArtifactThinkingModel({
-                  newArtifactContent: fullNewArtifactContent,
-                  setMessages,
-                  thinkingMessageId,
-                });
-              } else {
-                newArtifactContent = fullNewArtifactContent;
-              }
-
-              // Ensure we have the language to update the artifact with
-              const artifactLanguage =
-                params.portLanguage ||
-                (isArtifactCodeContent(prevCurrentContent)
-                  ? prevCurrentContent.language
-                  : "other");
-
-              const langGraphNode = langgraphNode;
-              let artifactType: ArtifactType;
-              if (langGraphNode === "rewriteCodeArtifactTheme") {
-                artifactType = "code";
-              } else if (langGraphNode === "rewriteArtifactTheme") {
-                artifactType = "text";
-              } else {
-                artifactType = prevCurrentContent.type;
-              }
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-
-                let content = newArtifactContent;
-                if (artifactType === "code") {
-                  content = removeCodeBlockFormatting(content);
-                }
-
-                return updateRewrittenArtifact({
-                  prevArtifact: prev ?? artifact,
-                  newArtifactContent: content,
-                  rewriteArtifactMeta: {
-                    type: artifactType,
-                    title: prevCurrentContent.title,
-                    language: artifactLanguage,
-                  },
-                  prevCurrentContent,
-                  newArtifactIndex,
-                  isFirstUpdate: firstUpdateCopy,
-                  artifactLanguage,
-                });
-              });
-
-              if (isFirstUpdate) {
-                isFirstUpdate = false;
-              }
-            }
-          }
-
-          if (event === "on_chat_model_end") {
-            if (
-              langgraphNode === "rewriteArtifact" &&
-              taskName === "rewrite_artifact_model_call" &&
-              rewriteArtifactMeta &&
-              NON_STREAMING_TEXT_MODELS.some((m) => m === threadData.modelName)
-            ) {
-              if (!artifact) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              const message = extractStreamDataOutput(nodeOutput);
-
-              fullNewArtifactContent += message.content || "";
-
-              // Ensure we have the language to update the artifact with
-              let artifactLanguage = params.portLanguage || undefined;
-              if (
-                !artifactLanguage &&
-                rewriteArtifactMeta.type === "code" &&
-                rewriteArtifactMeta.language
-              ) {
-                // If the type is `code` we should have a programming language populated
-                // in the rewriteArtifactMeta and can use that.
-                artifactLanguage =
-                  rewriteArtifactMeta.language as ProgrammingLanguageOptions;
-              } else if (!artifactLanguage) {
-                artifactLanguage =
-                  (prevCurrentContent?.title as ProgrammingLanguageOptions) ??
-                  "other";
-              }
-
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-
-                let content = fullNewArtifactContent;
-                if (!rewriteArtifactMeta) {
-                  console.error(
-                    "No rewrite artifact meta found when updating artifact"
-                  );
-                  return prev;
-                }
-                if (rewriteArtifactMeta.type === "code") {
-                  content = removeCodeBlockFormatting(content);
-                }
-
-                return updateRewrittenArtifact({
-                  prevArtifact: prev,
-                  newArtifactContent: content,
-                  rewriteArtifactMeta: rewriteArtifactMeta,
-                  prevCurrentContent,
-                  newArtifactIndex,
-                  isFirstUpdate: firstUpdateCopy,
-                  artifactLanguage,
-                });
-              });
-
-              if (isFirstUpdate) {
-                isFirstUpdate = false;
-              }
-            }
-
-            if (
-              langgraphNode === "updateHighlightedText" &&
-              NON_STREAMING_TEXT_MODELS.some((m) => m === threadData.modelName)
-            ) {
-              const message = extractStreamDataOutput(nodeOutput);
-              if (!message) {
-                continue;
-              }
-              if (!artifact) {
-                console.error(
-                  "No artifacts found when updating highlighted markdown..."
-                );
-                continue;
-              }
-              if (!highlightedText) {
-                toast({
-                  title: "Error",
-                  description: "No highlighted text found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                continue;
-              }
-              if (!prevCurrentContent) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (!isArtifactMarkdownContent(prevCurrentContent)) {
-                toast({
-                  title: "Error",
-                  description: "Received non markdown block update",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              const partialUpdatedContent = message.content || "";
-              const startIndexOfHighlightedText =
-                highlightedText.fullMarkdown.indexOf(
-                  highlightedText.markdownBlock
-                );
-
-              if (
-                updatedArtifactStartContent === undefined &&
-                updatedArtifactRestContent === undefined
-              ) {
-                // Initialize the start and rest content on first chunk
-                updatedArtifactStartContent =
-                  highlightedText.fullMarkdown.slice(
-                    0,
-                    startIndexOfHighlightedText
-                  );
-                updatedArtifactRestContent = highlightedText.fullMarkdown.slice(
-                  startIndexOfHighlightedText +
-                    highlightedText.markdownBlock.length
-                );
-              }
-
-              if (
-                updatedArtifactStartContent !== undefined &&
-                updatedArtifactRestContent !== undefined
-              ) {
-                updatedArtifactStartContent += partialUpdatedContent;
-              }
-
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-                return updateHighlightedMarkdown(
-                  prev,
-                  `${updatedArtifactStartContent}${updatedArtifactRestContent}`,
-                  newArtifactIndex,
-                  prevCurrentContent,
-                  firstUpdateCopy
-                );
-              });
-
-              if (isFirstUpdate) {
-                isFirstUpdate = false;
-              }
-            }
-
-            if (
-              langgraphNode === "updateArtifact" &&
-              NON_STREAMING_TEXT_MODELS.some((m) => m === threadData.modelName)
-            ) {
-              if (!artifact) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (!params.highlightedCode) {
-                toast({
-                  title: "Error",
-                  description: "No highlighted code found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              const message = extractStreamDataOutput(nodeOutput);
-              if (!message) {
-                continue;
-              }
-
-              const partialUpdatedContent = message.content || "";
-              const { startCharIndex, endCharIndex } = params.highlightedCode;
-
-              if (!prevCurrentContent) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (prevCurrentContent.type !== "code") {
-                toast({
-                  title: "Error",
-                  description: "Received non code block update",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-
-              if (
-                updatedArtifactStartContent === undefined &&
-                updatedArtifactRestContent === undefined
-              ) {
-                updatedArtifactStartContent =
-                  prevCurrentContent.code.slice(0, startCharIndex) +
-                  partialUpdatedContent;
-                updatedArtifactRestContent =
-                  prevCurrentContent.code.slice(endCharIndex);
-              }
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-                const content = removeCodeBlockFormatting(
-                  `${updatedArtifactStartContent}${updatedArtifactRestContent}`
-                );
-                return updateHighlightedCode(
-                  prev,
-                  content,
-                  newArtifactIndex,
-                  prevCurrentContent,
-                  firstUpdateCopy
-                );
-              });
-
-              if (isFirstUpdate) {
-                isFirstUpdate = false;
-              }
-            }
-
-            if (
-              [
-                "rewriteArtifactTheme",
-                "rewriteCodeArtifactTheme",
-                "customAction",
-              ].includes(langgraphNode) &&
-              NON_STREAMING_TEXT_MODELS.some((m) => m === threadData.modelName)
-            ) {
-              if (!artifact) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              if (!prevCurrentContent) {
-                toast({
-                  title: "Error",
-                  description: "Original artifact not found",
-                  variant: "destructive",
-                  duration: 5000,
-                });
-                return;
-              }
-              const message = extractStreamDataOutput(nodeOutput);
-              fullNewArtifactContent += message?.content || "";
-
-              // Ensure we have the language to update the artifact with
-              const artifactLanguage =
-                params.portLanguage ||
-                (isArtifactCodeContent(prevCurrentContent)
-                  ? prevCurrentContent.language
-                  : "other");
-
-              let artifactType: ArtifactType;
-              if (langgraphNode === "rewriteCodeArtifactTheme") {
-                artifactType = "code";
-              } else if (langgraphNode === "rewriteArtifactTheme") {
-                artifactType = "text";
-              } else {
-                artifactType = prevCurrentContent.type;
-              }
-              const firstUpdateCopy = isFirstUpdate;
-              setFirstTokenReceived(true);
-              setArtifact((prev) => {
-                if (!prev) {
-                  throw new Error("No artifact found when updating markdown");
-                }
-
-                let content = fullNewArtifactContent;
-                if (artifactType === "code") {
-                  content = removeCodeBlockFormatting(content);
-                }
-
-                return updateRewrittenArtifact({
-                  prevArtifact: prev ?? artifact,
-                  newArtifactContent: content,
-                  rewriteArtifactMeta: {
-                    type: artifactType,
-                    title: prevCurrentContent.title,
-                    language: artifactLanguage,
-                  },
-                  prevCurrentContent,
-                  newArtifactIndex,
-                  isFirstUpdate: firstUpdateCopy,
-                  artifactLanguage,
-                });
-              });
-            }
-
-            if (
-              ["generateFollowup", "replyToGeneralInput"].includes(
-                langgraphNode
-              ) &&
-              !followupMessageId &&
-              NON_STREAMING_TEXT_MODELS.some((m) => m === threadData.modelName)
-            ) {
-              const message = extractStreamDataOutput(nodeOutput);
-              followupMessageId = message.id;
-              setMessages((prevMessages) =>
-                replaceOrInsertMessageChunk(prevMessages, message)
-              );
-            }
-          }
-
-          if (event === "on_chain_end") {
-            if (
-              langgraphNode === "rewriteArtifact" &&
-              taskName === "optionally_update_artifact_meta"
-            ) {
-              rewriteArtifactMeta = nodeOutput;
-            }
-
-            if (langgraphNode === "search" && webSearchMessageId) {
-              const output = nodeOutput as {
-                webSearchResults: SearchResult[];
-              };
-
-              setMessages((prev) => {
-                return prev.map((m) => {
-                  if (m.id !== webSearchMessageId) return m;
-
-                  return new AIMessage({
-                    ...m,
-                    additional_kwargs: {
-                      ...m.additional_kwargs,
-                      webSearchResults: output.webSearchResults,
-                      webSearchStatus: "done",
-                    },
-                  });
-                });
-              });
-            }
-
-            if (
-              langgraphNode === "generateArtifact" &&
-              !generateArtifactToolCallStr &&
-              NON_STREAMING_TOOL_CALLING_MODELS.some(
-                (m) => m === threadData.modelName
-              )
-            ) {
-              const message = nodeOutput;
-              generateArtifactToolCallStr +=
-                message?.tool_call_chunks?.[0]?.args || message?.content || "";
-              const result = handleGenerateArtifactToolCallChunk(
-                generateArtifactToolCallStr
-              );
-              if (result && result === "continue") {
-                continue;
-              } else if (result && typeof result === "object") {
-                setFirstTokenReceived(true);
-                setArtifact(result);
-              }
-            }
-          }
-        } catch (e: any) {
-          console.error(
-            "Failed to parse stream chunk",
-            chunk,
-            "\n\nError:\n",
-            e
-          );
-
-          let errorMessage = "Unknown error. Please try again.";
-          if (typeof e === "object" && e?.message) {
-            errorMessage = e.message;
-          }
-
-          toast({
-            title: "Error generating content",
-            description: errorMessage,
-            variant: "destructive",
-            duration: 5000,
-          });
-          setError(true);
-          setIsStreaming(false);
-          break;
+        // 确保 content 不为空字符串
+        const isValid = msg.content.trim().length > 0;
+        if (!isValid) {
+          console.warn('Filtering out empty content message:', msg);
         }
-      }
-      lastSavedArtifact.current = artifact;
-    } catch (e) {
-      console.error("Failed to stream message", e);
-    } finally {
-      setSelectedBlocks(undefined);
-      setIsStreaming(false);
-    }
-
-    if (runId) {
-      // Chain `.then` to not block the stream
-      shareRun(runId).then(async (sharedRunURL) => {
-        setMessages((prevMessages) => {
-          const newMsgs = prevMessages.map((msg) => {
-            if (
-              msg.id === followupMessageId &&
-              !(msg as AIMessage).tool_calls?.find(
-                (tc) => tc.name === "langsmith_tool_ui"
-              )
-            ) {
-              const toolCall = {
-                name: "langsmith_tool_ui",
-                args: { sharedRunURL },
-                id: sharedRunURL
-                  ?.split("https://smith.langchain.com/public/")[1]
-                  .split("/")[0],
-              };
-              const castMsg = msg as AIMessage;
-              const newMessageWithToolCall = new AIMessage({
-                ...castMsg,
-                content: castMsg.content,
-                id: castMsg.id,
-                tool_calls: castMsg.tool_calls
-                  ? [...castMsg.tool_calls, toolCall]
-                  : [toolCall],
-              });
-              return newMessageWithToolCall;
-            }
-
-            return msg;
-          });
-          return newMsgs;
-        });
+        return isValid;
       });
+      
+      console.log('Valid messages after filtering:', validMessages.length, validMessages.map(m => ({
+        constructor: m?.constructor?.name,
+        content: typeof m.content === 'string' ? m.content.substring(0, 50) + '...' : 'not-string',
+        contentLength: typeof m.content === 'string' ? m.content.length : 'N/A'
+      })));
+
+      const updateData: any = {
+        values: {
+          messages: validMessages,
+        },
+      };
+
+      // 如果有 artifact，也保存
+      const artifactToSave = generatedData?.artifact || artifact;
+      if (artifactToSave) {
+        updateData.values.artifact = artifactToSave;
+      }
+      debugger
+      // 同时更新标题（如果是新线程且没有标题）
+      await client.threads.updateState(threadId, updateData);
+      
+
+      console.log(`Thread ${threadId} saved successfully with title: "${title}"`);
+      
+    } catch (error) {
+      console.error("Failed to save thread after conversation:", error);
+      // 不显示错误 toast，因为这是后台操作
     }
   };
 

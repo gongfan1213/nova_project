@@ -126,30 +126,108 @@ export async function PUT(
           .delete()
           .eq('thread_id', id)
 
-        // 插入新的 messages
-        const messagesToInsert = values.messages.map((message: any, index: number) => ({
-          thread_id: id,
-          user_id: authRes.user.id,
-          sequence_number: index + 1,
-          type: message.type || 'human',
-          content: typeof message.content === 'string' 
-            ? message.content 
-            : JSON.stringify(message.content),
-          additional_kwargs: message.additional_kwargs || {},
-          response_metadata: message.response_metadata || {},
-          tool_calls: message.tool_calls || [],
-          usage_metadata: message.usage_metadata || null,
-          created_at: message.created_at || new Date().toISOString(),
-        }))
+        // 打印原始消息数据以便调试
+        console.log('Raw messages received:', JSON.stringify(values.messages, null, 2))
+        
+        // 过滤并映射消息，确保内容有效
+        const validMessages = values.messages.filter((message: any) => {
+          // 处理 LangChain 格式的消息内容
+          let content = message.content;
+          if (message.lc && message.kwargs && message.kwargs.content) {
+            content = message.kwargs.content;
+          }
+          
+          if (!message || content === null || content === undefined) {
+            console.warn('Filtering out message with null/undefined content:', message)
+            return false
+          }
+          const contentStr = typeof content === 'string' 
+            ? content 
+            : JSON.stringify(content)
+          const isValid = contentStr && contentStr.trim().length > 0;
+          
+          if (!isValid) {
+            console.warn('Filtering out message with empty content:', { message, content, contentStr })
+          }
+          
+          return isValid;
+        })
+        
+        console.log(`Filtered ${validMessages.length} valid messages from ${values.messages.length} total messages`)
+
+        const messagesToInsert = validMessages.map((message: any, index: number) => {
+          // 处理 LangChain 消息格式
+          let messageType = 'human';
+          let content = message.content;
+          let additionalKwargs = message.additional_kwargs || {};
+          let responseMetadata = message.response_metadata || {};
+          let toolCalls = message.tool_calls || [];
+          let usageMetadata = message.usage_metadata || null;
+          
+          // 检查是否是 LangChain 格式的消息
+          if (message.lc && message.type === 'constructor' && message.id && message.kwargs) {
+            const msgClass = message.id[message.id.length - 1]; // 获取最后一个元素，例如 "AIMessage"
+            if (msgClass === 'AIMessage') {
+              messageType = 'ai';
+            } else if (msgClass === 'HumanMessage') {
+              messageType = 'human';
+            }
+            
+            // 从 kwargs 中提取字段
+            content = message.kwargs.content || content;
+            additionalKwargs = message.kwargs.additional_kwargs || additionalKwargs;
+            responseMetadata = message.kwargs.response_metadata || responseMetadata;
+            toolCalls = message.kwargs.tool_calls || toolCalls;
+            usageMetadata = message.kwargs.usage_metadata || usageMetadata;
+          } else if (message.type) {
+            messageType = message.type;
+          } else if (message.role === 'user') {
+            messageType = 'human';
+          } else if (message.role === 'assistant') {
+            messageType = 'ai';
+          }
+
+          return {
+            thread_id: id,
+            user_id: authRes.user.id,
+            sequence_number: index + 1,
+            type: messageType,
+            content: typeof content === 'string' ? content : JSON.stringify(content),
+            additional_kwargs: additionalKwargs,
+            response_metadata: responseMetadata,
+            tool_calls: toolCalls,
+            usage_metadata: usageMetadata,
+            created_at: message.created_at || new Date().toISOString(),
+          };
+        })
 
         if (messagesToInsert.length > 0) {
-          const { error: messagesError } = await supabase
+          console.log('Inserting messages:', messagesToInsert.map((m: any) => ({ 
+            type: m.type, 
+            content: m.content?.substring(0, 50) + '...', 
+            contentLength: m.content?.length,
+            sequence_number: m.sequence_number
+          })))
+          
+          const { data: insertedMessages, error: messagesError } = await supabase
             .from('messages')
             .insert(messagesToInsert)
+            .select('id, type, content, sequence_number')
 
           if (messagesError) {
+            console.error('Messages insert error:', messagesError)
+            console.error('Failed messages data:', messagesToInsert)
             throw new Error(`Failed to insert messages: ${messagesError.message}`)
           }
+          
+          console.log(`Successfully inserted ${insertedMessages?.length || 0} messages:`, 
+            insertedMessages?.map((m: any) => ({ 
+              id: m.id, 
+              type: m.type, 
+              sequence_number: m.sequence_number,
+              content: m.content?.substring(0, 50) + '...'
+            }))
+          )
         }
       }
 

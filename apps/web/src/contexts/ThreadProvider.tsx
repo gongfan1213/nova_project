@@ -20,7 +20,7 @@ type ThreadContentType = {
   modelConfigs: Record<ALL_MODEL_NAMES, CustomModelConfig>;
   createThreadLoading: boolean;
   getThread: (id: string) => Promise<Thread | undefined>;
-  createThread: () => Promise<Thread | undefined>;
+  createThread: (initialTitle?: string) => Promise<Thread | undefined>;
   getUserThreads: () => Promise<void>;
   deleteThread: (id: string, clearMessages: () => void) => Promise<void>;
   setThreadId: (id: string | null) => void;
@@ -135,7 +135,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const createThread = async (): Promise<Thread | undefined> => {
+  const createThread = async (initialTitle?: string): Promise<Thread | undefined> => {
     if (!user) {
       toast({
         title: "Failed to create thread",
@@ -160,13 +160,17 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
               azureConfig: modelConfig.azureConfig,
             }),
           },
+          // 设置初始标题，如果没有提供则使用默认值
+          thread_title: initialTitle || `New Chat - ${new Date().toLocaleString()}`,
         },
       });
 
       setThreadId(thread.thread_id);
+      
       // Fetch updated threads so the new thread is included.
       // Do not await since we do not want to block the UI.
       getUserThreads().catch(console.error);
+      
       return thread;
     } catch (e) {
       console.error("Failed to create thread", e);
