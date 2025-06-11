@@ -6,6 +6,7 @@ import { TighterText } from "../ui/header";
 import { NotebookPen } from "lucide-react";
 import { ProgrammingLanguagesDropdown } from "../ui/programming-lang-dropdown";
 import { Button } from "../ui/button";
+import { ChineseFeatureCards } from "./ChineseFeatureCards";
 
 const QUICK_START_PROMPTS_SEARCH = [
   "Write a market analysis of AI chip manufacturers in 2025",
@@ -75,7 +76,7 @@ const QuickStartPrompts = ({ searchEnabled }: QuickStartPromptsProps) => {
   return (
     <div className="flex flex-col w-full gap-2">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-        {selectedPrompts.map((prompt, index) => (
+        {/* {selectedPrompts.map((prompt, index) => (
           <Button
             key={`quick-start-prompt-${index}`}
             onClick={() => handleClick(prompt)}
@@ -86,7 +87,7 @@ const QuickStartPrompts = ({ searchEnabled }: QuickStartPromptsProps) => {
               {prompt}
             </p>
           </Button>
-        ))}
+        ))} */}
       </div>
     </div>
   );
@@ -100,8 +101,8 @@ const QuickStartButtons = (props: QuickStartButtonsProps) => {
   return (
     <div className="flex flex-col gap-8 items-center justify-center w-full">
       <div className="flex flex-col gap-6">
-        <p className="text-gray-600 text-sm">Start with a blank canvas</p>
-        <div className="flex flex-row gap-1 items-center justify-center w-full">
+        <p className="text-gray-600 text-sm">将你的想法转化为精彩内容 - 从这里开始</p>
+        {/* <div className="flex flex-row gap-1 items-center justify-center w-full">
           <Button
             variant="outline"
             className="text-gray-500 hover:text-gray-700 transition-colors ease-in rounded-2xl flex items-center justify-center gap-2 w-[250px] h-[64px]"
@@ -111,10 +112,10 @@ const QuickStartButtons = (props: QuickStartButtonsProps) => {
             <NotebookPen />
           </Button>
           <ProgrammingLanguagesDropdown handleSubmit={handleLanguageSubmit} />
-        </div>
+        </div> */}
       </div>
       <div className="flex flex-col gap-6 mt-2 w-full">
-        <p className="text-gray-600 text-sm">or with a message</p>
+        {/* <p className="text-gray-600 text-sm">or with a message</p> */}
         {props.composer}
         <QuickStartPrompts searchEnabled={props.searchEnabled} />
       </div>
@@ -134,16 +135,26 @@ interface ThreadWelcomeProps {
 export const ThreadWelcome: FC<ThreadWelcomeProps> = (
   props: ThreadWelcomeProps
 ) => {
+  const threadRuntime = useThreadRuntime();
+
+  // 卡片点击时，自动发送消息并跳转协作区
+  const handleCardClick = (title: string) => {
+    threadRuntime.append({
+      role: "user",
+      content: [{ type: "text", text: title }],
+    });
+  };
+
   return (
     <ThreadPrimitive.Empty>
-      <div className="flex items-center justify-center mt-16 w-full">
+      <div className="flex items-center justify-center mt-16 w-screen">
         <div className="text-center max-w-3xl w-full">
-          <Avatar className="mx-auto">
+          {/* <Avatar className="mx-auto">
             <AvatarImage src="/lc_logo.jpg" alt="LangChain Logo" />
             <AvatarFallback>LC</AvatarFallback>
-          </Avatar>
-          <TighterText className="mt-4 text-lg font-medium">
-            What would you like to write today?
+          </Avatar> */}
+          <TighterText className="mt-4 text-5xl font-bold">
+            Nova
           </TighterText>
           <div className="mt-8 w-full">
             <QuickStartButtons
@@ -151,9 +162,16 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
               handleQuickStart={props.handleQuickStart}
               searchEnabled={props.searchEnabled}
             />
+            <TighterText className="mt-4 text-2xl font-bold">
+            用Nova创作精彩内容
+          </TighterText>
+            
           </div>
+          {/* 中文卡片区块 */}
+          
         </div>
       </div>
+      <ChineseFeatureCards onCardClick={handleCardClick} />
     </ThreadPrimitive.Empty>
   );
 };

@@ -10,29 +10,29 @@ import { ComposerAttachments } from "../assistant-ui/attachment";
 import { ComposerActionsPopOut } from "./composer-actions-popout";
 
 const GENERIC_PLACEHOLDERS = [
-  "Share your big idea and let's write something amazing",
-  "Type your vision for the next great piece of content",
-  "Your masterpiece begins with this prompt",
-  "What would you like us to write about today?",
-  "Drop your content idea here and let's create",
-  "Your next great piece starts with this prompt",
-  "Share your story idea and watch it unfold",
-  "Let's write something incredible - start here",
-  "Your writing journey begins with this prompt",
-  "Turn your idea into content magic - start here",
+  "分享你的灵感，让内容闪耀全场",
+  "写下你的创意，开启爆款之路",
+  "你的故事，从这里开始",
+  "今天想和大家聊点什么？",
+  "输入想法，生成专属内容",
+  "让你的内容成为下一个热门",
+  "记录生活点滴，发现更多美好",
+  "大胆表达，灵感无限",
+  "用文字点亮你的社交圈",
+  "让创意在这里生根发芽",
 ];
 
 const SEARCH_PLACEHOLDERS = [
-  "Share your topic - I'll add live data",
-  "Write about anything - I'll find sources",
-  "Your idea + fresh research = great content",
-  "Start here with real-time facts",
-  "Topic here for data-rich content",
-  "Create with current insights",
-  "Write now with live sources",
-  "Your story + fresh data",
-  "Ideas welcome - research ready",
-  "Start fresh with live facts",
+  "输入话题，获取新鲜灵感",
+  "写下你的想法，AI帮你补充内容",
+  "你的创意+我的助力=爆款内容",
+  "从这里开始，发现更多趋势",
+  "输入主题，生成高质量内容",
+  "用AI丰富你的内容库",
+  "让每一次分享都与众不同",
+  "灵感随时捕捉，创作不设限",
+  "你的故事，我来助力",
+  "用AI点亮你的内容世界",
 ];
 
 const getRandomPlaceholder = (searchEnabled: boolean) => {
@@ -95,9 +95,9 @@ export const Composer: FC<ComposerProps> = (props: ComposerProps) => {
               <TooltipIconButton
                 tooltip="Send"
                 variant="default"
-                className="my-2.5 size-8 p-2 transition-opacity ease-in"
+                className="my-2.5 size-8 p-2 transition-opacity ease-in bg-red-500 hover:bg-red-600 rounded-lg"
               >
-                <SendHorizontalIcon />
+                <SendHorizontalIcon className="text-white" />
               </TooltipIconButton>
             </ComposerPrimitive.Send>
           </ThreadPrimitive.If>

@@ -1,5 +1,6 @@
+"use client";
+
 import { useToast } from "@/hooks/use-toast";
-import { Assistant } from "@langchain/langgraph-sdk";
 import { ContextDocument } from "@opencanvas/shared/types";
 import {
   createContext,
@@ -9,7 +10,7 @@ import {
   useContext,
   useState,
 } from "react";
-import { createClient } from "@/hooks/utils";
+import { createSupabaseClient, Assistant } from "@/lib/supabase-assistant-client";
 import { getCookie, removeCookie } from "@/lib/cookies";
 import { ASSISTANT_ID_COOKIE } from "@/constants";
 
@@ -110,16 +111,14 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const getAssistants = async (userId: string): Promise<void> => {
     setIsLoadingAllAssistants(true);
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
       const response = await client.assistants.search({
         metadata: {
           user_id: userId,
         },
       });
 
-      setAssistants({
-        ...response,
-      });
+      setAssistants(response);
       setIsLoadingAllAssistants(false);
     } catch (e) {
       toast({
@@ -134,7 +133,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const deleteAssistant = async (assistantId: string): Promise<boolean> => {
     setIsDeletingAssistant(true);
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
       await client.assistants.delete(assistantId);
 
       if (selectedAssistant?.assistant_id === assistantId) {
@@ -167,7 +166,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   }: CreateCustomAssistantArgs): Promise<Assistant | undefined> => {
     setIsCreatingAssistant(true);
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
       const { tools, systemPrompt, name, documents, ...metadata } =
         newAssistant;
       const createdAssistant = await client.assistants.create({
@@ -210,7 +209,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   }: EditCustomAssistantArgs): Promise<Assistant | undefined> => {
     setIsEditingAssistant(true);
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
       const { tools, systemPrompt, name, documents, ...metadata } =
         editedAssistant;
       const response = await client.assistants.update(assistantId, {
@@ -308,7 +307,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
       return;
     }
     setIsLoadingAllAssistants(true);
-    const client = createClient();
+    const client = createSupabaseClient();
     let userAssistants: Assistant[] = [];
 
     const assistantIdCookie = getCookie(ASSISTANT_ID_COOKIE);
@@ -367,10 +366,10 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
           is_default: true,
           iconData: {
             iconName:
-              (firstAssistant.metadata?.iconName as string | undefined) ||
+              (firstAssistant.metadata?.iconData?.iconName as string | undefined) ||
               "User",
             iconColor:
-              (firstAssistant.metadata?.iconColor as string | undefined) ||
+              (firstAssistant.metadata?.iconData?.iconColor as string | undefined) ||
               "#000000",
           },
           description:

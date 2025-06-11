@@ -23,7 +23,7 @@ export function UserInfo() {
   }
 
   return (
-    <div className="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-3 border max-w-xs">
+    <div className="hidden fixed top-8 right-8 bg-white shadow-lg rounded-lg p-3 border max-w-xs">
       <div className="text-xs text-gray-500 mb-2">
         {SKIP_AUTH ? "🚀 跳过登录模式" : "🔐 正常登录模式"}
       </div>

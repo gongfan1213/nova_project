@@ -5,8 +5,6 @@ import {
 } from "@opencanvas/shared/types";
 import { useState } from "react";
 import { useToast } from "./use-toast";
-import { Item } from "@langchain/langgraph-sdk";
-import { CONTEXT_DOCUMENTS_NAMESPACE } from "@opencanvas/shared/constants";
 
 export function useStore() {
   const { toast } = useToast();
@@ -233,14 +231,10 @@ export function useStore() {
     documents: ContextDocument[];
   }): Promise<void> => {
     try {
-      const res = await fetch("/api/store/put", {
-        method: "POST",
+      const res = await fetch(`/api/assistant/${assistantId}/documents`, {
+        method: "PUT",
         body: JSON.stringify({
-          namespace: CONTEXT_DOCUMENTS_NAMESPACE,
-          key: assistantId,
-          value: {
-            documents,
-          },
+          documents,
         }),
         headers: {
           "Content-Type": "application/json",
@@ -248,8 +242,9 @@ export function useStore() {
       });
 
       if (!res.ok) {
+        const error = await res.json();
         throw new Error(
-          "Failed to put context documents" + res.statusText + res.status
+          error.error || "Failed to put context documents" + res.statusText + res.status
         );
       }
     } catch (e) {
@@ -260,32 +255,29 @@ export function useStore() {
   const getContextDocuments = async (
     assistantId: string
   ): Promise<ContextDocument[] | undefined> => {
-    const res = await fetch("/api/store/get", {
-      method: "POST",
-      body: JSON.stringify({
-        namespace: CONTEXT_DOCUMENTS_NAMESPACE,
-        key: assistantId,
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    try {
+      const res = await fetch(`/api/assistant/${assistantId}/documents`, {
+        method: "GET",
+      });
 
-    if (!res.ok) {
-      console.error(
-        "Failed to get context documents",
-        res.statusText,
-        res.status
-      );
+      if (!res.ok) {
+        if (res.status === 404) {
+          return undefined;
+        }
+        console.error(
+          "Failed to get context documents",
+          res.statusText,
+          res.status
+        );
+        return undefined;
+      }
+
+      const documents = await res.json();
+      return documents;
+    } catch (e) {
+      console.error("Failed to get context documents.\n", e);
       return undefined;
     }
-
-    const { item }: { item: Item | null } = await res.json();
-    if (!item?.value?.documents) {
-      return undefined;
-    }
-
-    return item?.value?.documents;
   };
 
   return {

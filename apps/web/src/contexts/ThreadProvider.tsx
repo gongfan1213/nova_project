@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ALL_MODEL_NAMES,
   ALL_MODELS,
@@ -5,8 +7,7 @@ import {
   DEFAULT_MODEL_NAME,
 } from "@opencanvas/shared/models";
 import { CustomModelConfig } from "@opencanvas/shared/types";
-import { Thread } from "@langchain/langgraph-sdk";
-import { createClient } from "../hooks/utils";
+import { Thread, createSupabaseClient } from "../lib/supabase-thread-client";
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
 import { useUserContext } from "./UserContext";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +22,7 @@ type ThreadContentType = {
   modelConfigs: Record<ALL_MODEL_NAMES, CustomModelConfig>;
   createThreadLoading: boolean;
   getThread: (id: string) => Promise<Thread | undefined>;
-  createThread: () => Promise<Thread | undefined>;
+  createThread: (initialTitle?: string) => Promise<Thread | undefined>;
   getUserThreads: () => Promise<void>;
   deleteThread: (id: string, clearMessages: () => void) => Promise<void>;
   setThreadId: (id: string | null) => void;
@@ -136,7 +137,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const createThread = async (): Promise<Thread | undefined> => {
+  const createThread = async (initialTitle?: string): Promise<Thread | undefined> => {
     if (!user) {
       toast({
         title: "Failed to create thread",
@@ -146,7 +147,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
-    const client = createClient();
+    const client = createSupabaseClient();
     setCreateThreadLoading(true);
 
     try {
@@ -161,13 +162,17 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
               azureConfig: modelConfig.azureConfig,
             }),
           },
+          // 设置初始标题，如果没有提供则使用默认值
+          thread_title: initialTitle || `New Chat - ${new Date().toLocaleString()}`,
         },
       });
 
       setThreadId(thread.thread_id);
+      
       // Fetch updated threads so the new thread is included.
       // Do not await since we do not want to block the UI.
       getUserThreads().catch(console.error);
+      
       return thread;
     } catch (e) {
       console.error("Failed to create thread", e);
@@ -196,7 +201,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
     setIsUserThreadsLoading(true);
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
 
       const userThreads = await client.threads.search({
         metadata: {
@@ -232,7 +237,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       // threads to update UI.
       void createThread();
     }
-    const client = createClient();
+    const client = createSupabaseClient();
     try {
       await client.threads.delete(id);
     } catch (e) {
@@ -242,7 +247,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
   const getThread = async (id: string): Promise<Thread | undefined> => {
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
       return client.threads.get(id);
     } catch (e) {
       console.error("Failed to get thread by ID.", id, e);

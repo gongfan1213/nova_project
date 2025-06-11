@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/resizable";
 import { CHAT_COLLAPSED_QUERY_PARAM } from "@/constants";
 import { useRouter, useSearchParams } from "next/navigation";
+import MyNoteDialog from "@/components/MyNoteDialog";
 
 export function CanvasComponent() {
   const { graphData } = useGraphContext();
@@ -99,6 +100,9 @@ export function CanvasComponent() {
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-screen">
+      <div className="fixed bottom-18 right-8 z-50">
+      {chatStarted && <MyNoteDialog />}
+      </div>
       {!chatStarted && (
         <NoSSRWrapper>
           <ContentComposerChatInterface
