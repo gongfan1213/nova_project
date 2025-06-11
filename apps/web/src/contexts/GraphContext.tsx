@@ -959,6 +959,21 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       isNewThread = true;
     }
 
+
+    // 判断是否为重写artifact的情况
+    // 检查当前 Thread 是否有 conversation_id（表示已有对话）
+    let hasConversationId = false;
+    let conversationId = undefined;
+    if (currentThreadId) {
+      try {
+        const currentThread = await threadData.getThread(currentThreadId);
+        conversationId = currentThread?.metadata?.conversation_id;
+        hasConversationId = !!conversationId;
+      } catch (error) {
+        console.warn('Failed to get current thread metadata:', error);
+      }
+    }
+    
     // 判断是否为第一次生成新artifact的情况
     if (!artifact && params.messages && params.messages.length > 0) {
       // 第一种交互模式：第一次生成新artifact
@@ -976,21 +991,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // 判断是否为重写artifact的情况
-    // 检查当前 Thread 是否有 conversation_id（表示已有对话）
-    let hasConversationId = false;
-    let conversationId = undefined;
-    if (currentThreadId) {
-      try {
-        const currentThread = await threadData.getThread(currentThreadId);
-        conversationId = currentThread?.metadata?.conversation_id;
-        hasConversationId = !!conversationId;
-        debugger
-      } catch (error) {
-        console.warn('Failed to get current thread metadata:', error);
-      }
-    }
-    debugger
+
     if (
       !params.highlightedText &&
       artifact &&
@@ -1000,21 +1001,38 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     ) {
       // 重写artifact的交互模式
       await streamRewriteArtifact(params, conversationId);
-
-      // 对话结束后更新状态
-      if (currentThreadId) {
-        await saveThreadAfterConversation(currentThreadId, params);
-      }
+      
+      // 使用状态获取函数来获取最新状态
+      setMessages(currentMessages => {
+        setArtifact(currentArtifact => {
+          // 在这里，我们有最新的状态，可以保存
+          saveThreadAfterConversation(currentThreadId, params, {
+            messages: currentMessages as BaseMessage[],
+            artifact: currentArtifact as ArtifactV3,
+            conversationId: conversationId,
+          });
+          return currentArtifact;
+        });
+        return currentMessages;
+      });
       return;
     }
 
     if (params.highlightedText) {
       await streamRewriteHighlightedText(params);
-
-      // 对话结束后更新状态
-      if (currentThreadId) {
-        await saveThreadAfterConversation(currentThreadId, params);
-      }
+      
+      // 使用状态获取函数来获取最新状态
+      setMessages(currentMessages => {
+        setArtifact(currentArtifact => {
+          // 在这里，我们有最新的状态，可以保存
+          saveThreadAfterConversation(currentThreadId, params, {
+            messages: currentMessages as BaseMessage[],
+            artifact: currentArtifact as ArtifactV3,
+          });
+          return currentArtifact;
+        });
+        return currentMessages;
+      });
       return;
     }
 
@@ -1028,11 +1046,19 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       params.highlightedText = selectedBlocks;
       // 划线编辑
       await streamRewriteHighlightedText(params);
-
-      // 对话结束后更新状态
-      if (currentThreadId) {
-        await saveThreadAfterConversation(currentThreadId, params);
-      }
+      
+      // 使用状态获取函数来获取最新状态
+      setMessages(currentMessages => {
+        setArtifact(currentArtifact => {
+          // 在这里，我们有最新的状态，可以保存
+          saveThreadAfterConversation(currentThreadId, params, {
+            messages: currentMessages as BaseMessage[],
+            artifact: currentArtifact as ArtifactV3,
+          });
+          return currentArtifact;
+        });
+        return currentMessages;
+      });
       return;
     }
   };
