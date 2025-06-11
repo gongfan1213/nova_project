@@ -55,7 +55,7 @@ export function Header() {
         </nav>
         {/* 右侧模型选择器和N图标 */}
         <div className="flex items-center space-x-4">
-          <div className="min-w-[180px]">
+          {/* <div className="min-w-[180px]">
             <ModelSelector
               modelName={modelName}
               setModelName={setModelName}
@@ -63,7 +63,7 @@ export function Header() {
               setModelConfig={setModelConfig}
               modelConfigs={modelConfigs}
             />
-          </div>
+          </div> */}
           <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center ml-2">
             <TighterText className="text-xl font-bold text-white">N</TighterText>
           </div>

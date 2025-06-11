@@ -100,7 +100,7 @@ export function CanvasComponent() {
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-screen">
-      <div className="fixed bottom-18 right-8 z-50">
+      <div className="fixed top-[80px] right-[160px] z-50">
       {chatStarted && <MyNoteDialog />}
       </div>
       {!chatStarted && (
@@ -150,7 +150,7 @@ export function CanvasComponent() {
           defaultSize={25}
           minSize={15}
           maxSize={50}
-          className="transition-all duration-700 h-screen mr-auto bg-gray-50/70 shadow-inner-right"
+          className="transition-all duration-700 h-[calc(100vh-64px)] mr-auto bg-gray-50/70 shadow-inner-right"
           id="chat-panel-main"
           order={1}
         >

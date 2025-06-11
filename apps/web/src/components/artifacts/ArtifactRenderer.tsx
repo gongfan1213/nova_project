@@ -314,7 +314,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
     isStreaming;
 
   return (
-    <div className="relative w-full h-full max-h-screen overflow-auto">
+    <div className="relative w-full h-[calc(100vh-64px)] max-h-screen overflow-auto">
       <ArtifactHeader
         isArtifactSaved={isArtifactSaved}
         isBackwardsDisabled={isBackwardsDisabled}
