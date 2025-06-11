@@ -5,6 +5,7 @@ export interface ThreadMetadata {
   customModelName?: string
   modelConfig?: any
   thread_title?: string
+  conversation_id?: string
   [key: string]: any
 }
 

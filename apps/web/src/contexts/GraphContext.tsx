@@ -83,7 +83,6 @@ interface GraphData {
   artifactUpdateFailed: boolean;
   chatStarted: boolean;
   searchEnabled: boolean;
-  conversationId: string | undefined;
   setSearchEnabled: Dispatch<SetStateAction<boolean>>;
   setChatStarted: Dispatch<SetStateAction<boolean>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
@@ -97,7 +96,6 @@ interface GraphData {
   clearState: () => void;
   switchSelectedThread: (thread: Thread) => void;
   setUpdateRenderedArtifactRequired: Dispatch<SetStateAction<boolean>>;
-  setConversationId: Dispatch<SetStateAction<string | undefined>>;
 }
 
 type GraphContentType = {
@@ -150,7 +148,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState(false);
   const [artifactUpdateFailed, setArtifactUpdateFailed] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(false);
-  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
 
   const [_, setWebSearchResultsId] = useQueryState(
     WEB_SEARCH_RESULTS_QUERY_PARAM
@@ -271,11 +268,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setArtifact(undefined);
     setFirstTokenReceived(true);
-    setConversationId(undefined);
   };
 
   // 新增：处理第一种交互模式的函数
-  const streamFirstTimeGeneration = async (params: GraphInput): Promise<ThreadData> => {
+  const streamFirstTimeGeneration = async (
+    params: GraphInput
+  ): Promise<ThreadData> => {
     setFirstTokenReceived(false);
     setError(false);
     setIsStreaming(true);
@@ -285,28 +283,33 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 初始化返回数据
     // 从当前状态获取初始消息，确保包含用户输入
     let finalMessages: BaseMessage[] = [...messages];
-    
+
     // 如果有新的用户消息需要添加，确保它们包含必要的内容
     if (params.messages && params.messages.length > 0) {
       const lastMessage = params.messages[params.messages.length - 1];
-      if (lastMessage && typeof lastMessage === 'object' && 'content' in lastMessage) {
+      if (
+        lastMessage &&
+        typeof lastMessage === "object" &&
+        "content" in lastMessage
+      ) {
         // 确保消息有有效的内容
-        const messageContent = lastMessage.content || '';
+        const messageContent = lastMessage.content || "";
         if (messageContent.trim()) {
           finalMessages = [...messages, lastMessage as BaseMessage];
         }
       }
     }
-    
+
     let finalArtifact: ArtifactV3 | undefined;
     let finalConversationId: string | undefined;
 
     try {
       // 第一步：调用generateArtifact API
-      const userQuery = params.messages && params.messages.length > 0 
-        ? params.messages[params.messages.length - 1]?.content || ""
-        : "";
-      
+      const userQuery =
+        params.messages && params.messages.length > 0
+          ? params.messages[params.messages.length - 1]?.content || ""
+          : "";
+
       const generateResponse = await fetch("/api/dify/generate-artifact", {
         method: "POST",
         headers: {
@@ -332,34 +335,35 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          const lines = chunk.split("\n");
 
           for (const line of lines) {
-            if (line.trim() && line.startsWith('data: ')) {
+            if (line.trim() && line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
-                if (data.event === 'message') {
+                if (data.event === "message") {
                   // 提取 conversation_id
                   if (data.conversation_id && !receivedConversationId) {
                     receivedConversationId = data.conversation_id;
-                    setConversationId(receivedConversationId);
                     finalConversationId = receivedConversationId;
                   }
-                  
+
                   if (data.answer) {
                     artifactContent += data.answer;
-                    
+
                     // 实时更新artifact显示
                     const newArtifact: ArtifactV3 = {
                       currentIndex: 1,
-                      contents: [{
-                        index: 1,
-                        type: "text" as const, // 这里可以根据内容判断是code还是text
-                        title: "Generated Content",
-                        fullMarkdown: artifactContent,
-                      }],
+                      contents: [
+                        {
+                          index: 1,
+                          type: "text" as const, // 这里可以根据内容判断是code还是text
+                          title: "Generated Content",
+                          fullMarkdown: artifactContent,
+                        },
+                      ],
                     };
-                    
+
                     if (!firstTokenReceived) {
                       setFirstTokenReceived(true);
                     }
@@ -376,10 +380,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       }
 
       // 第二步：调用generateFollowup API
-      const chatHistory = params.messages 
-        ? params.messages.map(msg => `${msg.constructor.name}: ${msg.content}`).join('\n')
+      const chatHistory = params.messages
+        ? params.messages
+            .map((msg) => `${msg.constructor.name}: ${msg.content}`)
+            .join("\n")
         : "";
-      
+
       const followupResponse = await fetch("/api/dify/generate-followup", {
         method: "POST",
         headers: {
@@ -405,24 +411,26 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          const lines = chunk.split("\n");
 
           for (const line of lines) {
-            if (line.trim() && line.startsWith('data: ')) {
+            if (line.trim() && line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
-                if (data.event === 'message' && data.answer) {
+                if (data.event === "message" && data.answer) {
                   followupContent += data.answer;
-                  
+
                   // 实时更新聊天消息
                   const followupMessage = new AIMessage({
                     id: followupMessageId,
                     content: followupContent,
                   });
-                  
+
                   // 更新 UI 状态
                   setMessages((prevMessages) => {
-                    const existingIndex = prevMessages.findIndex(msg => msg.id === followupMessageId);
+                    const existingIndex = prevMessages.findIndex(
+                      (msg) => msg.id === followupMessageId
+                    );
                     let newMessages: BaseMessage[];
                     if (existingIndex >= 0) {
                       newMessages = [...prevMessages];
@@ -432,24 +440,29 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                     }
                     return newMessages;
                   });
-                  
+
                   // 更新要返回的最终消息列表
-                  const existingIndex = finalMessages.findIndex(msg => msg.id === followupMessageId);
+                  const existingIndex = finalMessages.findIndex(
+                    (msg) => msg.id === followupMessageId
+                  );
                   if (existingIndex >= 0) {
                     // 直接更新现有消息的内容
                     finalMessages[existingIndex] = followupMessage;
-                    console.log('Updated existing followup message in finalMessages', {
-                      index: existingIndex,
-                      contentLength: followupContent.length,
-                      totalMessages: finalMessages.length
-                    });
+                    console.log(
+                      "Updated existing followup message in finalMessages",
+                      {
+                        index: existingIndex,
+                        contentLength: followupContent.length,
+                        totalMessages: finalMessages.length,
+                      }
+                    );
                   } else {
                     // 只在第一次添加消息时添加到数组
                     finalMessages.push(followupMessage);
-                    console.log('Added new followup message to finalMessages', {
+                    console.log("Added new followup message to finalMessages", {
                       messageId: followupMessageId,
                       contentLength: followupContent.length,
-                      totalMessages: finalMessages.length
+                      totalMessages: finalMessages.length,
                     });
                   }
                 }
@@ -460,7 +473,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-
     } catch (error) {
       console.error("Error in first time generation:", error);
       toast({
@@ -475,12 +487,22 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     }
 
     // 确保最终消息列表包含所有必要的消息
-    console.log('Final messages to return:', finalMessages.map(m => ({
-      constructor: m?.constructor?.name,
-      content: typeof m?.content === 'string' ? m.content.substring(0, 50) + '...' : 'not-string',
-      contentType: typeof m?.content,
-      hasValidContent: !!(m?.content && typeof m.content === 'string' && m.content.trim())
-    })));
+    console.log(
+      "Final messages to return:",
+      finalMessages.map((m) => ({
+        constructor: m?.constructor?.name,
+        content:
+          typeof m?.content === "string"
+            ? m.content.substring(0, 50) + "..."
+            : "not-string",
+        contentType: typeof m?.content,
+        hasValidContent: !!(
+          m?.content &&
+          typeof m.content === "string" &&
+          m.content.trim()
+        ),
+      }))
+    );
 
     // 返回收集的对话数据
     return {
@@ -491,11 +513,17 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   };
 
   // 新增：处理重写artifact的函数
-  const streamRewriteArtifact = async (params: GraphInput) => {
-    if (!conversationId) {
+  const streamRewriteArtifact = async (
+    params: GraphInput,
+    providedConversationId?: string
+  ) => {
+    const activeConversationId = providedConversationId;
+
+    if (!activeConversationId) {
       toast({
         title: "Error",
-        description: "No conversation ID found. Please start a new conversation.",
+        description:
+          "No conversation ID found. Please start a new conversation.",
         variant: "destructive",
         duration: 5000,
       });
@@ -510,10 +538,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
 
     try {
       // 第一步：调用generateArtifact API，传入conversation_id
-      const userQuery = params.messages && params.messages.length > 0 
-        ? params.messages[params.messages.length - 1]?.content || ""
-        : "";
-      
+      const userQuery =
+        params.messages && params.messages.length > 0
+          ? params.messages[params.messages.length - 1]?.content || ""
+          : "";
+
       const generateResponse = await fetch("/api/dify/generate-artifact", {
         method: "POST",
         headers: {
@@ -521,7 +550,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({
           query: userQuery,
-          conversation_id: conversationId,
+          conversation_id: activeConversationId,
         }),
       });
 
@@ -539,26 +568,28 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          const lines = chunk.split("\n");
 
           for (const line of lines) {
-            if (line.trim() && line.startsWith('data: ')) {
+            if (line.trim() && line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
-                if (data.event === 'message' && data.answer) {
+                if (data.event === "message" && data.answer) {
                   artifactContent += data.answer;
-                  
+
                   // 覆盖更新artifact显示（不是追加）
                   const newArtifact: ArtifactV3 = {
                     currentIndex: 1,
-                    contents: [{
-                      index: 1,
-                      type: "text" as const,
-                      title: "Generated Content",
-                      fullMarkdown: artifactContent,
-                    }],
+                    contents: [
+                      {
+                        index: 1,
+                        type: "text" as const,
+                        title: "Generated Content",
+                        fullMarkdown: artifactContent,
+                      },
+                    ],
                   };
-                  
+
                   if (!firstTokenReceived) {
                     setFirstTokenReceived(true);
                   }
@@ -573,10 +604,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       }
 
       // 第二步：调用generateFollowup API
-      const chatHistory = params.messages 
-        ? params.messages.map(msg => `${msg.constructor.name}: ${msg.content}`).join('\n')
+      const chatHistory = params.messages
+        ? params.messages
+            .map((msg) => `${msg.constructor.name}: ${msg.content}`)
+            .join("\n")
         : "";
-      
+
       const followupResponse = await fetch("/api/dify/generate-followup", {
         method: "POST",
         headers: {
@@ -602,23 +635,25 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          const lines = chunk.split("\n");
 
           for (const line of lines) {
-            if (line.trim() && line.startsWith('data: ')) {
+            if (line.trim() && line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
-                if (data.event === 'message' && data.answer) {
+                if (data.event === "message" && data.answer) {
                   followupContent += data.answer;
-                  
+
                   // 追加新的聊天消息（不覆盖）
                   const followupMessage = new AIMessage({
                     id: followupMessageId,
                     content: followupContent,
                   });
-                  
+
                   setMessages((prevMessages) => {
-                    const existingIndex = prevMessages.findIndex(msg => msg.id === followupMessageId);
+                    const existingIndex = prevMessages.findIndex(
+                      (msg) => msg.id === followupMessageId
+                    );
                     if (existingIndex >= 0) {
                       // 更新已存在的消息内容
                       const newMessages = [...prevMessages];
@@ -637,7 +672,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-
     } catch (error) {
       console.error("Error in rewrite artifact:", error);
       toast({
@@ -654,22 +688,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
 
   // 新增：处理重写划线编辑的函数
   const streamRewriteHighlightedText = async (params: GraphInput) => {
-    // if (!conversationId) {
-    //   toast({
-    //     title: "Error",
-    //     description: "No conversation ID found. Please start a new conversation.",
-    //     variant: "destructive",
-    //     duration: 5000,
-    //   });
-    //   return;
-    // }
-
     setFirstTokenReceived(false);
     setError(false);
     setIsStreaming(true);
     setRunId(undefined);
     setFeedbackSubmitted(false);
-    
+
     try {
       // 第一步：调用generateArtifact API，传入conversation_id
       const userQuery =
@@ -697,45 +721,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           }),
         }
       );
-
-      // const PROMPT = `You are an expert AI writing assistant, tasked with rewriting some text a user has selected. The selected text is nested inside a larger 'block'. You should always respond with ONLY the updated text block in accordance with the user's request.
-      // You should always respond with the full markdown text block, as it will simply replace the existing block in the artifact.
-      // The blocks will be joined later on, so you do not need to worry about the formatting of the blocks, only make sure you keep the formatting and structure of the block you are updating.
-
-      // # Selected text
-      // {highlightedText}
-
-      // # Text block
-      // {textBlocks}
-
-      // Your task is to rewrite the sourounding content to fulfill the users request. The selected text content you are provided above has had the markdown styling removed, so you can focus on the text itself.
-      // However, ensure you ALWAYS respond with the full markdown text block, including any markdown syntax.
-      // NEVER wrap your response in any additional markdown syntax, as this will be handled by the system. Do NOT include a triple backtick wrapping the text block, unless it was present in the original text block.
-      // You should NOT change anything EXCEPT the selected text. The ONLY instance where you may update the sourounding text is if it is necessary to make the selected text make sense.
-      // You should ALWAYS respond with the full, updated text block, including any formatting, e.g newlines, indents, markdown syntax, etc. NEVER add extra syntax or formatting unless the user has specifically requested it.
-      // If you observe partial markdown, this is OKAY because you are only updating a partial piece of the text.
-
-      // Ensure you reply with the FULL text block, including the updated selected text. NEVER include only the updated selected text, or additional prefixes or suffixes.
-      // `;
-
-      // const selectedText: string = params?.highlightedText?.selectedText || "";
-      // const markdownBlock: string =
-      //   params?.highlightedText?.markdownBlock || "";
-      // const formattedPrompt = PROMPT.replace(
-      //   "{highlightedText}",
-      //   selectedText
-      // ).replace("{textBlocks}", markdownBlock);
-
-      // const generateResponse = await fetch("/api/dify/generate-artifact", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({
-      //     query: formattedPrompt,
-      //     conversation_id: conversationId,
-      //   }),
-      // });
 
       if (!generateResponse.ok) {
         throw new Error("Failed to rewrite artifact");
@@ -951,12 +936,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       setIsStreaming(false);
     }
   };
-  
+
   // 修改原来的streamMessage函数，添加条件判断
   const streamMessageV2 = async (params: GraphInput) => {
     let currentThreadId = threadData.threadId;
     let isNewThread = false;
-    
+
     if (!currentThreadId) {
       const newThread = await threadData.createThread(
         params?.messages?.[0]?.content?.slice(0, 50) || ""
@@ -978,26 +963,44 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     if (!artifact && params.messages && params.messages.length > 0) {
       // 第一种交互模式：第一次生成新artifact
       const generatedThreadData = await streamFirstTimeGeneration(params);
-      console.log('Generated thread data:', generatedThreadData);
-      
+      console.log("Generated thread data:", generatedThreadData);
+
       // 对话结束后，如果是新线程，更新 thread 标题和保存完整状态
       if (isNewThread && currentThreadId) {
-        await saveThreadAfterConversation(currentThreadId, params, generatedThreadData);
+        await saveThreadAfterConversation(
+          currentThreadId,
+          params,
+          generatedThreadData
+        );
       }
       return;
     }
-    
+
     // 判断是否为重写artifact的情况
+    // 检查当前 Thread 是否有 conversation_id（表示已有对话）
+    let hasConversationId = false;
+    let conversationId = undefined;
+    if (currentThreadId) {
+      try {
+        const currentThread = await threadData.getThread(currentThreadId);
+        conversationId = currentThread?.metadata?.conversation_id;
+        hasConversationId = !!conversationId;
+        debugger
+      } catch (error) {
+        console.warn('Failed to get current thread metadata:', error);
+      }
+    }
+    debugger
     if (
       !params.highlightedText &&
       artifact &&
       params.messages &&
       params.messages.length > 0 &&
-      conversationId
+      hasConversationId
     ) {
       // 重写artifact的交互模式
-      await streamRewriteArtifact(params);
-      
+      await streamRewriteArtifact(params, conversationId);
+
       // 对话结束后更新状态
       if (currentThreadId) {
         await saveThreadAfterConversation(currentThreadId, params);
@@ -1007,14 +1010,14 @@ export function GraphProvider({ children }: { children: ReactNode }) {
 
     if (params.highlightedText) {
       await streamRewriteHighlightedText(params);
-      
+
       // 对话结束后更新状态
       if (currentThreadId) {
         await saveThreadAfterConversation(currentThreadId, params);
       }
       return;
     }
-    
+
     if (
       !params.highlightedText &&
       artifact &&
@@ -1025,7 +1028,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       params.highlightedText = selectedBlocks;
       // 划线编辑
       await streamRewriteHighlightedText(params);
-      
+
       // 对话结束后更新状态
       if (currentThreadId) {
         await saveThreadAfterConversation(currentThreadId, params);
@@ -1035,49 +1038,66 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   };
 
   // 新增：对话结束后保存 Thread 状态的函数
-  const saveThreadAfterConversation = async (threadId: string, params: GraphInput, generatedData?: ThreadData) => {
+  const saveThreadAfterConversation = async (
+    threadId: string,
+    params: GraphInput,
+    generatedData?: ThreadData
+  ) => {
     try {
       const client = createSupabaseClient();
-      
+
       // 生成对话标题（使用用户的第一个消息）
-      const userMessage = params.messages && params.messages.length > 0 
-        ? params.messages[params.messages.length - 1]?.content || ""
-        : "";
-      
+      const userMessage =
+        params.messages && params.messages.length > 0
+          ? params.messages[params.messages.length - 1]?.content || ""
+          : "";
+
       // 截取前50个字符作为标题
-      const title = userMessage.length > 50 
-        ? userMessage.substring(0, 47) + "..."
-        : userMessage || "New Conversation";
+      const title =
+        userMessage.length > 50
+          ? userMessage.substring(0, 47) + "..."
+          : userMessage || "New Conversation";
 
       // 更新 Thread 的状态，包括消息和 artifacts
       const messagesToSave = generatedData?.messages || messages;
 
       // 过滤掉无效的消息（content 为 null 或空）
-      console.log('Messages to save before filtering:', messagesToSave.map(m => ({
-        constructor: m?.constructor?.name,
-        content: m?.content,
-        contentType: typeof m?.content,
-        hasContent: !!m?.content
-      })));
-      
-      const validMessages = messagesToSave.filter(msg => {
-        if (!msg || typeof msg.content !== 'string') {
-          console.warn('Filtering out invalid message:', msg);
+      console.log(
+        "Messages to save before filtering:",
+        messagesToSave.map((m) => ({
+          constructor: m?.constructor?.name,
+          content: m?.content,
+          contentType: typeof m?.content,
+          hasContent: !!m?.content,
+        }))
+      );
+
+      const validMessages = messagesToSave.filter((msg) => {
+        if (!msg || typeof msg.content !== "string") {
+          console.warn("Filtering out invalid message:", msg);
           return false;
         }
         // 确保 content 不为空字符串
         const isValid = msg.content.trim().length > 0;
         if (!isValid) {
-          console.warn('Filtering out empty content message:', msg);
+          console.warn("Filtering out empty content message:", msg);
         }
         return isValid;
       });
-      
-      console.log('Valid messages after filtering:', validMessages.length, validMessages.map(m => ({
-        constructor: m?.constructor?.name,
-        content: typeof m.content === 'string' ? m.content.substring(0, 50) + '...' : 'not-string',
-        contentLength: typeof m.content === 'string' ? m.content.length : 'N/A'
-      })));
+
+      console.log(
+        "Valid messages after filtering:",
+        validMessages.length,
+        validMessages.map((m) => ({
+          constructor: m?.constructor?.name,
+          content:
+            typeof m.content === "string"
+              ? m.content.substring(0, 50) + "..."
+              : "not-string",
+          contentLength:
+            typeof m.content === "string" ? m.content.length : "N/A",
+        }))
+      );
 
       const updateData: any = {
         values: {
@@ -1090,13 +1110,32 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       if (artifactToSave) {
         updateData.values.artifact = artifactToSave;
       }
-      debugger
+
+      // 如果有 conversationId，更新 Thread 的 metadata
+      const conversationIdToSave = generatedData?.conversationId;
+      debugger;
+      if (conversationIdToSave) {
+        try {
+          // 使用 Thread 更新 API 来更新 conversation_id
+          await client.threads.update(threadId, {
+            metadata: {
+              conversation_id: conversationIdToSave,
+            },
+          });
+          console.log(
+            `Updated thread ${threadId} with conversation_id: ${conversationIdToSave}`
+          );
+        } catch (error) {
+          console.error("Failed to update thread conversation_id:", error);
+        }
+      }
+
       // 同时更新标题（如果是新线程且没有标题）
       await client.threads.updateState(threadId, updateData);
-      
 
-      console.log(`Thread ${threadId} saved successfully with title: "${title}"`);
-      
+      console.log(
+        `Thread ${threadId} saved successfully with title: "${title}"`
+      );
     } catch (error) {
       console.error("Failed to save thread after conversation:", error);
       // 不显示错误 toast，因为这是后台操作
@@ -1234,7 +1273,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       chatStarted,
       artifactUpdateFailed,
       searchEnabled,
-      conversationId,
       setSearchEnabled,
       setChatStarted,
       setIsStreaming,
@@ -1248,7 +1286,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       clearState,
       switchSelectedThread,
       setUpdateRenderedArtifactRequired,
-      setConversationId,
     },
   };
 

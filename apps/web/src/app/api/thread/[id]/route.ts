@@ -23,6 +23,7 @@ export async function GET(
         id,
         user_id,
         assistant_id,
+        conversation_id,
         title,
         model_name,
         model_config,
@@ -99,6 +100,7 @@ export async function GET(
         customModelName: thread.model_name,
         modelConfig: thread.model_config,
         thread_title: thread.title,
+        conversation_id: thread.conversation_id,
         ...thread.metadata,
       },
       values: Object.keys(values).length > 0 ? values : {},
@@ -163,6 +165,10 @@ export async function PUT(
       updateData.model_config = metadata.modelConfig
     }
 
+    if (metadata.conversation_id !== undefined) {
+      updateData.conversation_id = metadata.conversation_id
+    }
+
     if (Object.keys(metadata).length > 0) {
       updateData.metadata = metadata
     }
@@ -193,6 +199,7 @@ export async function PUT(
         customModelName: updatedThread.model_name,
         modelConfig: updatedThread.model_config,
         thread_title: updatedThread.title,
+        conversation_id: updatedThread.conversation_id,
         ...updatedThread.metadata,
       },
       values: {}, // 更新操作不返回 values

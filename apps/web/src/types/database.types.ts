@@ -379,6 +379,7 @@ export type Database = {
             threads: {
                 Row: {
                     assistant_id: string | null
+                    conversation_id: string | null
                     created_at: string | null
                     id: string
                     metadata: Json | null
@@ -390,6 +391,7 @@ export type Database = {
                 }
                 Insert: {
                     assistant_id?: string | null
+                    conversation_id?: string | null
                     created_at?: string | null
                     id?: string
                     metadata?: Json | null
@@ -401,6 +403,7 @@ export type Database = {
                 }
                 Update: {
                     assistant_id?: string | null
+                    conversation_id?: string | null
                     created_at?: string | null
                     id?: string
                     metadata?: Json | null

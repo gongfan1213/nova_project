@@ -109,6 +109,27 @@ export default function TestThreadPage() {
     }
   }
 
+  const updateConversationId = async (threadId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await client.threads.update(threadId, {
+        metadata: {
+          conversation_id: "hans-test-001"
+        }
+      })
+      // Reload the thread to see updated conversation_id
+      if (selectedThread) {
+        await loadThread(threadId)
+      }
+      console.log(`Updated thread ${threadId} with conversation_id: hans-test-001`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update conversation_id')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadThreads()
   }, [])
@@ -164,6 +185,9 @@ export default function TestThreadPage() {
                     <div className="text-xs text-gray-400">
                       Model: {thread.metadata.customModelName || 'N/A'}
                     </div>
+                    <div className="text-xs text-gray-400">
+                      Conversation ID: {thread.metadata.conversation_id || 'N/A'}
+                    </div>
                   </div>
                   <button
                     onClick={(e) => {
@@ -197,6 +221,7 @@ export default function TestThreadPage() {
                   <div>ID: {selectedThread.thread_id}</div>
                   <div>Title: {selectedThread.metadata.thread_title || 'Untitled'}</div>
                   <div>Model: {selectedThread.metadata.customModelName || 'N/A'}</div>
+                  <div>Conversation ID: {selectedThread.metadata.conversation_id || 'N/A'}</div>
                   <div>Created: {new Date(selectedThread.created_at).toLocaleString()}</div>
                   <div>Updated: {new Date(selectedThread.updated_at).toLocaleString()}</div>
                 </div>
@@ -216,13 +241,20 @@ export default function TestThreadPage() {
                 </pre>
               </div>
 
-              <div className="pt-4">
+              <div className="pt-4 space-x-2">
                 <button
                   onClick={() => updateThreadState(selectedThread.thread_id)}
                   disabled={loading}
                   className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 disabled:opacity-50"
                 >
                   Update State (Test)
+                </button>
+                <button
+                  onClick={() => updateConversationId(selectedThread.thread_id)}
+                  disabled={loading}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
+                >
+                  Set ConversationId: hans-test-001
                 </button>
               </div>
             </div>

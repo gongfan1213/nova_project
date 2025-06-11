@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
         id,
         user_id,
         assistant_id,
+        conversation_id,
         title,
         model_name,
         model_config,
@@ -117,6 +118,7 @@ export async function GET(req: NextRequest) {
             customModelName: thread.model_name,
             modelConfig: thread.model_config,
             thread_title: thread.title,
+            conversation_id: thread.conversation_id,
             ...thread.metadata,
           },
           values: Object.keys(values).length > 0 ? values : undefined,
@@ -222,6 +224,7 @@ export async function POST(req: NextRequest) {
         customModelName: newThread.model_name,
         modelConfig: newThread.model_config,
         thread_title: newThread.title,
+        conversation_id: newThread.conversation_id,
         ...newThread.metadata,
       },
       values: {}, // 新创建的 thread 没有 messages 和 artifacts
