@@ -31,10 +31,14 @@ const cards = [
   },
 ];
 
-export const ChineseFeatureCards: React.FC = () => (
+export const ChineseFeatureCards: React.FC<{ onCardClick?: (title: string) => void }> = ({ onCardClick }) => (
   <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6 mt-8 px-4">
     {cards.map((card, idx) => (
-      <div key={idx} className="bg-white rounded-xl shadow-md p-6">
+      <div
+        key={idx}
+        className="bg-white rounded-xl shadow-md p-6 cursor-pointer hover:shadow-lg transition"
+        onClick={() => onCardClick?.(card.title)}
+      >
         <div className="flex items-center mb-4">
           <span className="text-lg font-bold text-gray-900 flex-1">{card.title}</span>
           <span className={`px-3 py-1 text-sm font-medium rounded ${card.badgeClass}`}>{card.badge}</span>

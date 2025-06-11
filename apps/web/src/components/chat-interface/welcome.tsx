@@ -135,6 +135,16 @@ interface ThreadWelcomeProps {
 export const ThreadWelcome: FC<ThreadWelcomeProps> = (
   props: ThreadWelcomeProps
 ) => {
+  const threadRuntime = useThreadRuntime();
+
+  // 卡片点击时，自动发送消息并跳转协作区
+  const handleCardClick = (title: string) => {
+    threadRuntime.append({
+      role: "user",
+      content: [{ type: "text", text: title }],
+    });
+  };
+
   return (
     <ThreadPrimitive.Empty>
       <div className="flex items-center justify-center mt-16 w-screen">
@@ -161,7 +171,7 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
           
         </div>
       </div>
-      <ChineseFeatureCards />
+      <ChineseFeatureCards onCardClick={handleCardClick} />
     </ThreadPrimitive.Empty>
   );
 };
