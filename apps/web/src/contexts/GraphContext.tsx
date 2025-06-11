@@ -1140,7 +1140,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
 
       // 如果有 conversationId，更新 Thread 的 metadata
       const conversationIdToSave = generatedData?.conversationId;
-      debugger;
       if (conversationIdToSave) {
         try {
           // 使用 Thread 更新 API 来更新 conversation_id
