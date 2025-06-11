@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+1. 过程文档记录到 .cursor/markdown
+3. 记录文档的过程可以做todo,确保你知道哪些功能还没完成。
+
+# 你必须遵守如下规则：
+2. 代码格式化规则：
+  不使用分号 (semi: false)
+  使用单引号 (singleQuote: true)
+  行宽限制 100 字符 (printWidth: 100)
+  缩进 2 个空格 (tabWidth: 2)
+  尾随逗号 ES5 格式 (trailingComma: 'es5')
+  对象括号内加空格 (bracketSpacing: true)  
+------
+# 数据库和 supabase MCP
+1. 如果开启了supabase MCP 使用如下配置：
+2. 本项目使用这个组织 {"id":"haghcahvpqgxcikoypce","name":"bluelab-nova"} 的 616882224@qq.com's Project

@@ -18,7 +18,6 @@ import {
 } from "@opencanvas/shared/types";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { useRuns } from "@/hooks/useRuns";
-import { createClient } from "@/hooks/utils";
 import { WEB_SEARCH_RESULTS_QUERY_PARAM } from "@/constants";
 import {
   DEFAULT_INPUTS,
@@ -31,7 +30,6 @@ import {
   DEFAULT_MODEL_CONFIG,
   DEFAULT_MODEL_NAME,
 } from "@opencanvas/shared/models";
-import { Thread } from "@langchain/langgraph-sdk";
 import { useToast } from "@/hooks/use-toast";
 import {
   createContext,
@@ -62,6 +60,7 @@ import { useThreadContext } from "./ThreadProvider";
 import { useAssistantContext } from "./AssistantContext";
 import { StreamWorkerService } from "@/workers/graph-stream/streamWorker";
 import { useQueryState } from "nuqs";
+import { Thread, createSupabaseClient } from "@/lib/supabase-thread-client";
 
 interface GraphData {
   runId: string | undefined;
@@ -248,7 +247,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     if (isStreaming) return;
 
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
       await client.threads.updateState(threadId, {
         values: {
           artifact: artifactToUpdate,

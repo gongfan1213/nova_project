@@ -5,8 +5,7 @@ import {
   DEFAULT_MODEL_NAME,
 } from "@opencanvas/shared/models";
 import { CustomModelConfig } from "@opencanvas/shared/types";
-import { Thread } from "@langchain/langgraph-sdk";
-import { createClient } from "../hooks/utils";
+import { Thread, createSupabaseClient } from "../lib/supabase-thread-client";
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
 import { useUserContext } from "./UserContext";
 import { useToast } from "@/hooks/use-toast";
@@ -146,7 +145,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
-    const client = createClient();
+    const client = createSupabaseClient();
     setCreateThreadLoading(true);
 
     try {
@@ -196,7 +195,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
     setIsUserThreadsLoading(true);
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
 
       const userThreads = await client.threads.search({
         metadata: {
@@ -232,7 +231,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       // threads to update UI.
       void createThread();
     }
-    const client = createClient();
+    const client = createSupabaseClient();
     try {
       await client.threads.delete(id);
     } catch (e) {
@@ -242,7 +241,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
 
   const getThread = async (id: string): Promise<Thread | undefined> => {
     try {
-      const client = createClient();
+      const client = createSupabaseClient();
       return client.threads.get(id);
     } catch (e) {
       console.error("Failed to get thread by ID.", id, e);
