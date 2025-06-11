@@ -75,32 +75,76 @@ export async function PUT(
           console.log(`Existing artifact found with ${existingContents.length} contents, max index: ${maxExistingIndex}`)
 
           if (artifact.contents && Array.isArray(artifact.contents) && artifact.contents.length > 0) {
-            // 如果有现有内容，需要追加新的内容并递增 index
-            let nextIndex = maxExistingIndex + 1
-            
-            // 处理新的 contents，为每个分配新的递增 index
-            const contentsToInsert = artifact.contents.map((content: any) => ({
-              artifact_id: artifactId,
-              index: nextIndex++, // 使用递增的 index
-              type: content.type,
-              title: content.title,
-              language: content.language || null,
-              code: content.code || null,
-              full_markdown: content.fullMarkdown || null,
-            }))
+            // 获取最新的一条内容（index最大的）用于去重比较
+            const latestExistingContent = existingContents.length > 0 
+              ? existingContents.find((c: any) => c.index === maxExistingIndex)
+              : null
 
-            console.log(`Inserting ${contentsToInsert.length} new contents with indices ${maxExistingIndex + 1} to ${nextIndex - 1}`)
+            console.log(`Latest existing content (index ${maxExistingIndex}):`, latestExistingContent)
 
-            const { error: contentsError } = await supabase
-              .from('artifact_contents')
-              .insert(contentsToInsert)
+            // 过滤出不重复的新内容
+            const uniqueContents = artifact.contents.filter((newContent: any) => {
+              if (!latestExistingContent) {
+                return true; // 如果没有现有内容，则所有新内容都是唯一的
+              }
 
-            if (contentsError) {
-              throw new Error(`Failed to insert artifact contents: ${contentsError.message}`)
+              // 比较内容字符串，根据内容类型选择比较字段
+              let newContentStr = '';
+              let existingContentStr = '';
+
+              if (newContent.type === 'code') {
+                newContentStr = newContent.code || '';
+                existingContentStr = latestExistingContent.code || '';
+              } else if (newContent.type === 'text') {
+                newContentStr = newContent.fullMarkdown || '';
+                existingContentStr = latestExistingContent.full_markdown || '';
+              }
+
+              const isDuplicate = newContentStr.trim() === existingContentStr.trim();
+              
+              if (isDuplicate) {
+                console.log(`Skipping duplicate content (type: ${newContent.type}):`, {
+                  newContentLength: newContentStr.length,
+                  existingContentLength: existingContentStr.length,
+                  title: newContent.title
+                });
+              }
+
+              return !isDuplicate;
+            });
+
+            if (uniqueContents.length > 0) {
+              // 如果有非重复的新内容，需要追加并递增 index
+              let nextIndex = maxExistingIndex + 1
+              
+              // 处理新的 contents，为每个分配新的递增 index
+              const contentsToInsert = uniqueContents.map((content: any) => ({
+                artifact_id: artifactId,
+                index: nextIndex++, // 使用递增的 index
+                type: content.type,
+                title: content.title,
+                language: content.language || null,
+                code: content.code || null,
+                full_markdown: content.fullMarkdown || null,
+              }))
+
+              console.log(`Inserting ${contentsToInsert.length} unique contents with indices ${maxExistingIndex + 1} to ${nextIndex - 1}`)
+
+              const { error: contentsError } = await supabase
+                .from('artifact_contents')
+                .insert(contentsToInsert)
+
+              if (contentsError) {
+                throw new Error(`Failed to insert artifact contents: ${contentsError.message}`)
+              }
+
+              // 设置新的 current_index 为最新添加的内容的 index
+              newCurrentIndex = nextIndex - 1
+            } else {
+              console.log('All contents are duplicates, skipping insertion')
+              // 如果所有内容都是重复的，保持当前 index
+              newCurrentIndex = artifact.currentIndex || existingArtifact.current_index
             }
-
-            // 设置新的 current_index 为最新添加的内容的 index
-            newCurrentIndex = nextIndex - 1
           } else {
             // 如果没有新内容要添加，保持当前 index
             newCurrentIndex = artifact.currentIndex || existingArtifact.current_index
