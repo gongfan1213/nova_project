@@ -94,7 +94,7 @@ export function UserAuthForm({
           </Button>
         </div>
       </form>
-      <div className="relative">
+      {/* <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t" />
         </div>
@@ -103,8 +103,8 @@ export function UserAuthForm({
             Or continue with
           </span>
         </div>
-      </div>
-      <Button
+      </div> */}
+      {/* <Button
         onClick={async () => {
           setGoogleIsLoading(true);
           await onSignupWithOauth("google");
@@ -137,7 +137,7 @@ export function UserAuthForm({
           <Icons.gitHub className="mr-2 h-4 w-4" />
         )}{" "}
         GitHub
-      </Button>
+      </Button> */}
     </div>
   );
 }
