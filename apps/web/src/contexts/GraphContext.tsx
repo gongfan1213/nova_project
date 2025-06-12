@@ -31,10 +31,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  convertToArtifactV3,
-  updateHighlightedMarkdown,
-} from "./utils";
+import { convertToArtifactV3, updateHighlightedMarkdown } from "./utils";
 import { debounce } from "lodash";
 import { useThreadContext } from "./ThreadProvider";
 import { useAssistantContext } from "./AssistantContext";
@@ -83,14 +80,14 @@ type GraphContentType = {
 
 const GraphContext = createContext<GraphContentType | undefined>(undefined);
 
-
-
 export function GraphProvider({ children }: { children: ReactNode }) {
   const userData = useUserContext();
   const assistantsData = useAssistantContext();
   const threadData = useThreadContext();
   const { toast } = useToast();
   const [chatStarted, setChatStarted] = useState(false);
+  const [currentThreadData, setCurrentThread] = useState<any>(undefined);
+  const [metadata, setMetadata] = useState<any>(undefined);
   const [messages, setMessages] = useState<BaseMessage[]>([]);
   const [artifact, setArtifact] = useState<ArtifactV3>();
   const [selectedBlocks, setSelectedBlocks] = useState<TextHighlight>();
@@ -100,8 +97,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const lastSavedArtifact = useRef<ArtifactV3 | undefined>(undefined);
   const debouncedAPIUpdate = useRef(
     debounce(
-      (artifact: ArtifactV3, threadId: string) =>
-        updateArtifact(artifact, threadId),
+      (artifact: ArtifactV3, messages: BaseMessage[], threadId: string) =>
+        updateArtifact(artifact, messages, threadId),
       5000
     )
   ).current;
@@ -149,19 +146,19 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // 如果没有 threadId，或者正在流式传输，或者线程刚切换，则不执行
     if (!threadData.threadId || isStreaming || threadSwitched) return;
-    
+
     // 如果没有 artifact，不需要保存
     if (!artifact) return;
-    
+
     // 如果需要更新渲染状态，等待渲染完成后再保存
     if (updateRenderedArtifactRequired) return;
-    
+
     const currentIndex = artifact.currentIndex;
     const currentContent = artifact.contents.find(
       (c) => c.index === currentIndex
     );
     if (!currentContent) return;
-    
+
     // 如果 artifact 内容为空，不保存
     if (
       (artifact.contents.length === 1 &&
@@ -175,12 +172,20 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 只有当 artifact 内容真正发生变化时才保存
     if (
       !lastSavedArtifact.current ||
-      JSON.stringify(lastSavedArtifact.current.contents) !== JSON.stringify(artifact.contents)
+      JSON.stringify(lastSavedArtifact.current.contents) !==
+        JSON.stringify(artifact.contents)
     ) {
       setIsArtifactSaved(false);
-      debouncedAPIUpdate(artifact, threadData.threadId);
+      debouncedAPIUpdate(artifact, messages, threadData.threadId);
     }
-  }, [artifact, threadData.threadId, isStreaming, threadSwitched, updateRenderedArtifactRequired]);
+  }, [
+    messages,
+    artifact,
+    threadData.threadId,
+    isStreaming,
+    threadSwitched,
+    updateRenderedArtifactRequired,
+  ]);
 
   const searchOrCreateEffectRan = useRef(false);
 
@@ -201,6 +206,14 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     }
     searchOrCreateEffectRan.current = true;
 
+    if (
+      currentThreadData?.thread_id &&
+      currentThreadData.thread_id === threadData.threadId
+    ) {
+      // 没变
+      return;
+    }
+
     threadData.getThread(threadData.threadId).then((thread) => {
       if (thread) {
         switchSelectedThread(thread);
@@ -212,8 +225,28 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     });
   }, [threadData.threadId, userData.user, threadData.createThreadLoading]);
 
+  // useEffect(() => {
+  //   const lastMessage: any = messages.length
+  //     ? messages?.[messages.length - 1]
+  //     : undefined;
+  //   if (lastMessage?.type !== "ai") {
+  //     // 当模型回复 才存储
+  //     return;
+  //   }
+
+  //   saveThreadAfterConversation(
+  //     currentThreadData?.thread_id,
+  //     {},
+  //     {
+  //       messages: messages as BaseMessage[],
+  //       artifact: artifact as ArtifactV3,
+  //     }
+  //   );
+  // }, [messages]);
+
   const updateArtifact = async (
     artifactToUpdate: ArtifactV3,
+    messagesToUpdate: BaseMessage[],
     threadId: string
   ) => {
     setArtifactUpdateFailed(false);
@@ -224,6 +257,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       await client.threads.updateState(threadId, {
         values: {
           artifact: artifactToUpdate,
+          messages: messagesToUpdate,
         },
       });
       setIsArtifactSaved(true);
@@ -237,6 +271,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setArtifact(undefined);
     setFirstTokenReceived(true);
+    setMetadata(undefined);
+    setCurrentThread(undefined);
   };
 
   // 新增：处理第一种交互模式的函数
@@ -545,13 +581,18 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                 const data = JSON.parse(line.slice(6));
                 if (data.event === "message" && data.answer) {
                   artifactContent += data.answer;
+                  // index 从1 开始
+                  let currentIndex = artifact?.currentIndex || 0;
+                  const contents = artifact?.contents || [];
+                  currentIndex = currentIndex + 1;
 
                   // 覆盖更新artifact显示（不是追加）
                   const newArtifact: ArtifactV3 = {
-                    currentIndex: 1,
+                    currentIndex: currentIndex,
                     contents: [
+                      ...contents,
                       {
-                        index: 1,
+                        index: currentIndex,
                         type: "text" as const,
                         title: "Generated Content",
                         fullMarkdown: artifactContent,
@@ -795,8 +836,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                   if (!firstTokenReceived) {
                     setFirstTokenReceived(true);
                   }
-                  
-                  console.log("hans-web-updatedArtifactStartContent", `${updatedArtifactStartContent}${updatedArtifactRestContent}`);
+
+                  console.log(
+                    "hans-web-updatedArtifactStartContent",
+                    `${updatedArtifactStartContent}${updatedArtifactRestContent}`
+                  );
 
                   setArtifact((prev) => {
                     if (!prev) {
@@ -912,8 +956,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   // 修改原来的streamMessage函数，添加条件判断
   const streamMessageV2 = async (params: GraphInput) => {
     let currentThreadId = threadData.threadId;
-    let isNewThread = false;
 
+    let newMetadata = undefined;
     if (!currentThreadId) {
       const newThread = await threadData.createThread(
         params?.messages?.[0]?.content?.slice(0, 50) || ""
@@ -928,7 +972,9 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         return;
       }
       currentThreadId = newThread.thread_id;
-      isNewThread = true;
+      setMetadata(newThread.metadata);
+      setCurrentThread(newThread);
+      newMetadata = newThread.metadata;
     }
 
     // 判断是否为重写artifact的情况
@@ -936,36 +982,56 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 优化：只在需要时获取线程信息，避免频繁调用API
     let hasConversationId = false;
     let conversationId = undefined;
-    
+
     // 只有在有artifact且没有highlightedText时才需要检查conversation_id
-    if (currentThreadId && artifact && !params.highlightedText && params.messages && params.messages.length > 0) {
+    if (
+      currentThreadId &&
+      artifact &&
+      !params.highlightedText &&
+      params.messages &&
+      params.messages.length > 0
+    ) {
       try {
-        const currentThread = await threadData.getThread(currentThreadId);
-        conversationId = currentThread?.metadata?.conversation_id;
+        conversationId =
+          newMetadata?.conversation_id || metadata?.conversation_id;
         hasConversationId = !!conversationId;
       } catch (error) {
-        console.warn('Failed to get current thread metadata:', error);
+        console.warn("Failed to get current thread metadata:", error);
       }
     }
-    
+
     // 判断是否为第一次生成新artifact的情况
     if (!artifact && params.messages && params.messages.length > 0) {
+      const client = createSupabaseClient();
       // 第一种交互模式：第一次生成新artifact
       const generatedThreadData = await streamFirstTimeGeneration(params);
-      console.log("Generated thread data:", generatedThreadData);
-
-      // 对话结束后，如果是新线程，更新 thread 标题和保存完整状态
-      if (isNewThread && currentThreadId) {
-        await saveThreadAfterConversation(
-          currentThreadId,
-          params,
-          generatedThreadData
-        );
+      // 如果有 conversationId，更新 Thread 的 metadata
+      const conversationIdToSave = generatedThreadData?.conversationId;
+      if (conversationIdToSave) {
+        try {
+          setMetadata({
+            ...metadata,
+            conversation_id: conversationIdToSave,
+          });
+          // 使用 Thread 更新 API 来更新 conversation_id
+          await client.threads.update(currentThreadId, {
+            metadata: {
+              conversation_id: conversationIdToSave,
+            },
+          });
+          console.log(
+            `Updated thread ${currentThreadId} with conversation_id: ${conversationIdToSave}`
+          );
+        } catch (error) {
+          console.error("Failed to update thread conversation_id:", error);
+        }
       }
+
+      console.log("Generated thread data:", generatedThreadData);
       return;
     }
 
-
+    // 重写artifact的交互模式
     if (
       !params.highlightedText &&
       artifact &&
@@ -975,168 +1041,13 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     ) {
       // 重写artifact的交互模式
       await streamRewriteArtifact(params, conversationId);
-      
-      // 使用状态获取函数来获取最新状态
-      setMessages(currentMessages => {
-        setArtifact(currentArtifact => {
-          // 在这里，我们有最新的状态，可以保存
-          saveThreadAfterConversation(currentThreadId, params, {
-            messages: currentMessages as BaseMessage[],
-            artifact: currentArtifact as ArtifactV3,
-          });
-          return currentArtifact;
-        });
-        return currentMessages;
-      });
       return;
     }
 
+    // 划线编辑
     if (params.highlightedText) {
       await streamRewriteHighlightedText(params);
-      
-      // 使用状态获取函数来获取最新状态
-      setMessages(currentMessages => {
-        setArtifact(currentArtifact => {
-          // 在这里，我们有最新的状态，可以保存
-          saveThreadAfterConversation(currentThreadId, params, {
-            messages: currentMessages as BaseMessage[],
-            artifact: currentArtifact as ArtifactV3,
-          });
-          return currentArtifact;
-        });
-        return currentMessages;
-      });
       return;
-    }
-
-    if (
-      !params.highlightedText &&
-      artifact &&
-      params.messages &&
-      params.messages.length > 0 &&
-      selectedBlocks
-    ) {
-      params.highlightedText = selectedBlocks;
-      // 划线编辑
-      await streamRewriteHighlightedText(params);
-      
-      // 使用状态获取函数来获取最新状态
-      setMessages(currentMessages => {
-        setArtifact(currentArtifact => {
-          // 在这里，我们有最新的状态，可以保存
-          saveThreadAfterConversation(currentThreadId, params, {
-            messages: currentMessages as BaseMessage[],
-            artifact: currentArtifact as ArtifactV3,
-          });
-          return currentArtifact;
-        });
-        return currentMessages;
-      });
-      return;
-    }
-  };
-
-  // 新增：对话结束后保存 Thread 状态的函数
-  const saveThreadAfterConversation = async (
-    threadId: string,
-    params: GraphInput,
-    generatedData?: ThreadData
-  ) => {
-    try {
-      const client = createSupabaseClient();
-
-      // 生成对话标题（使用用户的第一个消息）
-      const userMessage =
-        params.messages && params.messages.length > 0
-          ? params.messages[params.messages.length - 1]?.content || ""
-          : "";
-
-      // 截取前50个字符作为标题
-      const title =
-        userMessage.length > 50
-          ? userMessage.substring(0, 47) + "..."
-          : userMessage || "New Conversation";
-
-      // 更新 Thread 的状态，包括消息和 artifacts
-      const messagesToSave = generatedData?.messages || messages;
-
-      // 过滤掉无效的消息（content 为 null 或空）
-      console.log(
-        "Messages to save before filtering:",
-        messagesToSave.map((m) => ({
-          constructor: m?.constructor?.name,
-          content: m?.content,
-          contentType: typeof m?.content,
-          hasContent: !!m?.content,
-        }))
-      );
-
-      const validMessages = messagesToSave.filter((msg) => {
-        if (!msg || typeof msg.content !== "string") {
-          console.warn("Filtering out invalid message:", msg);
-          return false;
-        }
-        // 确保 content 不为空字符串
-        const isValid = msg.content.trim().length > 0;
-        if (!isValid) {
-          console.warn("Filtering out empty content message:", msg);
-        }
-        return isValid;
-      });
-
-      console.log(
-        "Valid messages after filtering:",
-        validMessages.length,
-        validMessages.map((m) => ({
-          constructor: m?.constructor?.name,
-          content:
-            typeof m.content === "string"
-              ? m.content.substring(0, 50) + "..."
-              : "not-string",
-          contentLength:
-            typeof m.content === "string" ? m.content.length : "N/A",
-        }))
-      );
-
-      const updateData: any = {
-        values: {
-          messages: validMessages,
-        },
-      };
-
-      // 如果有 artifact，也保存
-      const artifactToSave = generatedData?.artifact || artifact;
-      if (artifactToSave) {
-        updateData.values.artifact = artifactToSave;
-      }
-
-      // 如果有 conversationId，更新 Thread 的 metadata
-      const conversationIdToSave = generatedData?.conversationId;
-      if (conversationIdToSave) {
-        try {
-          // 使用 Thread 更新 API 来更新 conversation_id
-          await client.threads.update(threadId, {
-            metadata: {
-              conversation_id: conversationIdToSave,
-            },
-          });
-          console.log(
-            `Updated thread ${threadId} with conversation_id: ${conversationIdToSave}`
-          );
-        } catch (error) {
-          console.error("Failed to update thread conversation_id:", error);
-        }
-      }
-
-      // 同时更新标题（如果是新线程且没有标题）
-      await client.threads.updateState(threadId, updateData);
-
-      console.log(
-        `Thread ${threadId} saved successfully with title: "${title}"`
-      );
-    } catch (error) {
-      console.error("Failed to save thread after conversation:", error);
-      // 不显示错误 toast，因为这是后台操作
     }
   };
 
@@ -1236,8 +1147,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     if (!castValues?.messages?.length) {
       setMessages([]);
       setArtifact(castValues?.artifact);
+      setMetadata(thread.metadata);
+      setCurrentThread(thread);
       return;
     }
+
     setArtifact(castValues?.artifact);
     setMessages(
       castValues.messages.map((msg: Record<string, any>) => {
@@ -1254,6 +1168,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         return msg as BaseMessage;
       })
     );
+    setMetadata(thread.metadata);
+    setCurrentThread(thread);
   };
 
   const contextValue: GraphContentType = {
