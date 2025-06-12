@@ -391,93 +391,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
             .join("\n")
         : "";
 
-      const followupResponse = await fetch("/api/dify/generate-followup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          artifact: artifactContent,
-          query: chatHistory,
-        }),
-      });
+      await generateFollowup(artifactContent, chatHistory, finalMessages);
 
-      if (!followupResponse.ok) {
-        throw new Error("Failed to generate followup");
-      }
-
-      const followupReader = followupResponse.body?.getReader();
-      let followupContent = "";
-      const followupMessageId = `followup-${uuidv4()}`;
-
-      if (followupReader) {
-        while (true) {
-          const { done, value } = await followupReader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.trim() && line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.event === "message" && data.answer) {
-                  followupContent += data.answer;
-
-                  // 实时更新聊天消息
-                  const followupMessage = new AIMessage({
-                    id: followupMessageId,
-                    content: followupContent,
-                  });
-
-                  // 更新 UI 状态
-                  setMessages((prevMessages) => {
-                    const existingIndex = prevMessages.findIndex(
-                      (msg) => msg.id === followupMessageId
-                    );
-                    let newMessages: BaseMessage[];
-                    if (existingIndex >= 0) {
-                      newMessages = [...prevMessages];
-                      newMessages[existingIndex] = followupMessage;
-                    } else {
-                      newMessages = [...prevMessages, followupMessage];
-                    }
-                    return newMessages;
-                  });
-
-                  // 更新要返回的最终消息列表
-                  const existingIndex = finalMessages.findIndex(
-                    (msg) => msg.id === followupMessageId
-                  );
-                  if (existingIndex >= 0) {
-                    // 直接更新现有消息的内容
-                    finalMessages[existingIndex] = followupMessage;
-                    console.log(
-                      "Updated existing followup message in finalMessages",
-                      {
-                        index: existingIndex,
-                        contentLength: followupContent.length,
-                        totalMessages: finalMessages.length,
-                      }
-                    );
-                  } else {
-                    // 只在第一次添加消息时添加到数组
-                    finalMessages.push(followupMessage);
-                    console.log("Added new followup message to finalMessages", {
-                      messageId: followupMessageId,
-                      contentLength: followupContent.length,
-                      totalMessages: finalMessages.length,
-                    });
-                  }
-                }
-              } catch (e) {
-                // 忽略解析错误
-              }
-            }
-          }
-        }
-      }
     } catch (error) {
       console.error("Error in first time generation:", error);
       toast({
@@ -490,24 +405,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsStreaming(false);
     }
-
-    // 确保最终消息列表包含所有必要的消息
-    console.log(
-      "Final messages to return:",
-      finalMessages.map((m) => ({
-        constructor: m?.constructor?.name,
-        content:
-          typeof m?.content === "string"
-            ? m.content.substring(0, 50) + "..."
-            : "not-string",
-        contentType: typeof m?.content,
-        hasValidContent: !!(
-          m?.content &&
-          typeof m.content === "string" &&
-          m.content.trim()
-        ),
-      }))
-    );
 
     // 返回收集的对话数据
     return {
@@ -620,68 +517,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
             .join("\n")
         : "";
 
-      const followupResponse = await fetch("/api/dify/generate-followup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          artifact: artifactContent,
-          query: chatHistory,
-        }),
-      });
+      await generateFollowup(artifactContent, chatHistory, messages);
 
-      if (!followupResponse.ok) {
-        throw new Error("Failed to generate followup");
-      }
-
-      const followupReader = followupResponse.body?.getReader();
-      let followupContent = "";
-      const followupMessageId = `followup-${uuidv4()}`;
-
-      if (followupReader) {
-        while (true) {
-          const { done, value } = await followupReader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.trim() && line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.event === "message" && data.answer) {
-                  followupContent += data.answer;
-
-                  // 追加新的聊天消息（不覆盖）
-                  const followupMessage = new AIMessage({
-                    id: followupMessageId,
-                    content: followupContent,
-                  });
-
-                  setMessages((prevMessages) => {
-                    const existingIndex = prevMessages.findIndex(
-                      (msg) => msg.id === followupMessageId
-                    );
-                    if (existingIndex >= 0) {
-                      // 更新已存在的消息内容
-                      const newMessages = [...prevMessages];
-                      newMessages[existingIndex] = followupMessage;
-                      return newMessages;
-                    } else {
-                      // 追加新消息
-                      return [...prevMessages, followupMessage];
-                    }
-                  });
-                }
-              } catch (e) {
-                // 忽略解析错误
-              }
-            }
-          }
-        }
-      }
     } catch (error) {
       console.error("Error in rewrite artifact:", error);
       toast({
@@ -877,68 +714,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
             .join("\n")
         : "";
 
-      const followupResponse = await fetch("/api/dify/generate-followup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          artifact: params?.highlightedText?.fullMarkdown,
-          query: chatHistory,
-        }),
-      });
+      await generateFollowup(params?.highlightedText?.fullMarkdown || '', chatHistory);
 
-      if (!followupResponse.ok) {
-        throw new Error("Failed to generate followup");
-      }
-
-      const followupReader = followupResponse.body?.getReader();
-      let followupContent = "";
-      const followupMessageId = `followup-${uuidv4()}`;
-
-      if (followupReader) {
-        while (true) {
-          const { done, value } = await followupReader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.trim() && line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.event === "message" && data.answer) {
-                  followupContent += data.answer;
-
-                  // 追加新的聊天消息（不覆盖）
-                  const followupMessage = new AIMessage({
-                    id: followupMessageId,
-                    content: followupContent,
-                  });
-
-                  setMessages((prevMessages) => {
-                    const existingIndex = prevMessages.findIndex(
-                      (msg) => msg.id === followupMessageId
-                    );
-                    if (existingIndex >= 0) {
-                      // 更新已存在的消息内容
-                      const newMessages = [...prevMessages];
-                      newMessages[existingIndex] = followupMessage;
-                      return newMessages;
-                    } else {
-                      // 追加新消息
-                      return [...prevMessages, followupMessage];
-                    }
-                  });
-                }
-              } catch (e) {
-                // 忽略解析错误
-              }
-            }
-          }
-        }
-      }
     } catch (error) {
       console.error("Error in rewrite artifact:", error);
       toast({
@@ -1171,6 +948,106 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     setMetadata(thread.metadata);
     setCurrentThread(thread);
   };
+
+  // 通用的 followup 生成方法
+  const generateFollowup = async (
+    artifactContent: string,
+    chatHistory: string,
+    finalMessages?: BaseMessage[]
+  ) => {
+    const followupResponse = await fetch("/api/dify/generate-followup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        artifact: artifactContent,
+        query: chatHistory,
+      }),
+    })
+
+    if (!followupResponse.ok) {
+      throw new Error("Failed to generate followup")
+    }
+
+    const followupReader = followupResponse.body?.getReader()
+    let followupContent = ""
+    const followupMessageId = `followup-${uuidv4()}`
+
+    if (followupReader) {
+      const decoder = new TextDecoder()
+      
+      while (true) {
+        const { done, value } = await followupReader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split("\n")
+
+        for (const line of lines) {
+          if (line.trim() && line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.event === "message" && data.answer) {
+                followupContent += data.answer
+
+                // 创建 followup 消息
+                const followupMessage = new AIMessage({
+                  id: followupMessageId,
+                  content: followupContent,
+                })
+
+                // 更新 UI 状态中的消息
+                setMessages((prevMessages) => {
+                  const existingIndex = prevMessages.findIndex(
+                    (msg) => msg.id === followupMessageId
+                  )
+                  if (existingIndex >= 0) {
+                    // 更新已存在的消息内容
+                    const newMessages = [...prevMessages]
+                    newMessages[existingIndex] = followupMessage
+                    return newMessages
+                  } else {
+                    // 追加新消息
+                    return [...prevMessages, followupMessage]
+                  }
+                })
+
+                // 如果提供了 finalMessages 数组，也更新它（用于第一次生成的场景）
+                if (finalMessages) {
+                  const existingIndex = finalMessages.findIndex(
+                    (msg) => msg.id === followupMessageId
+                  )
+                  if (existingIndex >= 0) {
+                    // 直接更新现有消息的内容
+                    finalMessages[existingIndex] = followupMessage
+                    console.log(
+                      "Updated existing followup message in finalMessages",
+                      {
+                        index: existingIndex,
+                        contentLength: followupContent.length,
+                        totalMessages: finalMessages.length,
+                      }
+                    )
+                  } else {
+                    // 只在第一次添加消息时添加到数组
+                    finalMessages.push(followupMessage)
+                    console.log("Added new followup message to finalMessages", {
+                      messageId: followupMessageId,
+                      contentLength: followupContent.length,
+                      totalMessages: finalMessages.length,
+                    })
+                  }
+                }
+              }
+            } catch (e) {
+              // 忽略解析错误
+            }
+          }
+        }
+      }
+    }
+  }
 
   const contextValue: GraphContentType = {
     graphData: {
