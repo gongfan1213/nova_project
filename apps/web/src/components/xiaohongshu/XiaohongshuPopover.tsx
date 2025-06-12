@@ -1,31 +1,17 @@
+import { useEffect, useState } from 'react'
 import { XiaohongshuCard } from './XiaohongshuCard'
 
-const mockArticles = [
-  {
-    title: '夏日护肤攻略',
-    description: '夏天护肤的关键要点',
-    status: '草稿',
-    category: '美妆',
-    updated_at: '2024-06-05',
-  },
-  {
-    title: 'iPhone 15 Pro深度评测',
-    description: '全面解析iPhone 15 Pro的设计、性能、摄影等特性，为用户提供购买决策建议',
-    status: '已完成',
-    category: '科技',
-    updated_at: '2024-06-06',
-  },
-  {
-    title: '职场新人必备指南',
-    description: '全面解析iPhone 15 Pro的设计、性能、摄影等特性，为用户提供购买决策建议',
-    status: '已完成',
-    category: '科技',
-    updated_at: '2024-06-06',
-  },
-  // ...更多文章
-]
+export function XiaohongshuPopover({ open, onClose, projectId }: { open: boolean, onClose: () => void, projectId?: string }) {
+  const [articles, setArticles] = useState<any[]>([])
 
-export function XiaohongshuPopover({ open, onClose }: { open: boolean, onClose: () => void }) {
+  useEffect(() => {
+    if (open && projectId) {
+      fetch(`/api/projects/${projectId}/xiaohongshu`).then(res => res.json()).then(data => setArticles(data || []))
+    } else if (!open) {
+      setArticles([])
+    }
+  }, [open, projectId])
+
   if (!open) return null
   return (
     <div
@@ -43,9 +29,13 @@ export function XiaohongshuPopover({ open, onClose }: { open: boolean, onClose: 
         </button>
       </div>
       <div className="flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: 420 }}>
-        {mockArticles.map((article, idx) => (
-          <XiaohongshuCard key={idx} article={article} />
-        ))}
+        {articles.length === 0 ? (
+          <div className="text-gray-400 text-center py-8">暂无草稿</div>
+        ) : (
+          articles.map((article, idx) => (
+            <XiaohongshuCard key={article.id || idx} article={article} />
+          ))
+        )}
       </div>
     </div>
   )

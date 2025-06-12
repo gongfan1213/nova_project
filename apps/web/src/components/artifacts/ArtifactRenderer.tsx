@@ -27,6 +27,7 @@ export interface ArtifactRendererProps {
   setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
   chatCollapsed: boolean;
   setChatCollapsed: (c: boolean) => void;
+  projectId?: string;
 }
 
 interface SelectionBox {
@@ -359,6 +360,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
                 isInputVisible={isInputVisible}
                 isEditing={props.isEditing}
                 isHovering={isHoveringOverArtifact}
+                projectId={props.projectId}
               />
             ) : null}
             {currentArtifactContent.type === "code" ? (

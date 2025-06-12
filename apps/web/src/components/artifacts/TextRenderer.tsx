@@ -60,6 +60,7 @@ export interface TextRendererProps {
   isEditing: boolean;
   isHovering: boolean;
   isInputVisible: boolean;
+  projectId: string;
 }
 
 export function TextRendererComponent(props: TextRendererProps) {
@@ -277,7 +278,7 @@ export function TextRendererComponent(props: TextRendererProps) {
             >
               <BookOpen className="w-5 h-5 text-gray-600" />
             </TooltipIconButton>
-            <XiaohongshuPopover open={openXhs} onClose={() => setOpenXhs(false)} />
+            <XiaohongshuPopover open={openXhs} onClose={() => setOpenXhs(false)} projectId={props.projectId} />
           </div>
         </div>
       )}

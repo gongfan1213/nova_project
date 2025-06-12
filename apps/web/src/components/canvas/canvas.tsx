@@ -292,6 +292,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
                 }}
                 setIsEditing={setIsEditing}
                 isEditing={isEditing}
+                projectId={projectId}
               />
             </div>
             <WebSearchResults
