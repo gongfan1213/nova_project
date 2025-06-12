@@ -30,6 +30,7 @@ import { CHAT_COLLAPSED_QUERY_PARAM } from "@/constants";
 import { useRouter, useSearchParams } from "next/navigation";
 import MyNoteDialog from "@/components/MyNoteDialog";
 import { createSupabaseClient } from "@/lib/supabase/client";
+import { ProjectHistoryComponent } from "../chat-interface/thread-history";
 
 const supabase = createSupabaseClient();
 
@@ -41,6 +42,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
   const [isEditing, setIsEditing] = useState(false);
   const [webSearchResultsOpen, setWebSearchResultsOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [projectCollapsed, setProjectCollapsed] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -166,7 +168,10 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
   };
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-screen">
+    <ResizablePanelGroup
+      direction="horizontal"
+      className="h-screen flex !flex-row-reverse"
+    >
       {!chatStarted && (
         <NoSSRWrapper>
           <ContentComposerChatInterface
@@ -211,7 +216,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
       )}
       {!chatCollapsed && chatStarted && (
         <ResizablePanel
-          defaultSize={25}
+          defaultSize={40}
           minSize={15}
           maxSize={50}
           className="transition-all duration-700 h-[calc(100vh-64px)] mr-auto bg-gray-50/70 shadow-inner-right"
@@ -267,9 +272,9 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
         <>
           <ResizableHandle />
           <ResizablePanel
-            defaultSize={chatCollapsed ? 100 : 75}
+            defaultSize={chatCollapsed ? 100 : 100}
             maxSize={85}
-            minSize={50}
+            minSize={10}
             id="canvas-panel"
             order={2}
             className="flex flex-row w-full"
@@ -300,6 +305,36 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
               setOpen={setWebSearchResultsOpen}
             />
           </ResizablePanel>
+          {/*  */}
+          {!projectCollapsed && (
+            <>
+              <ResizableHandle />
+              {/*  */}
+              <ResizablePanel
+                defaultSize={projectCollapsed ? 10 : 10}
+                maxSize={85}
+                minSize={10}
+                id="canvas-project-history"
+                order={2}
+                className="flex flex-row w-full"
+              >
+                <div className="flex flex-col w-full">
+                  {/* <div className="w-full text-right">
+                    <button onClick={() => setProjectCollapsed(true)}>
+                      隐藏
+                    </button>
+                  </div> */}
+                  <div className="">
+                    <ProjectHistoryComponent
+                      switchSelectedThreadCallback={() => {
+                        //
+                      }}
+                    />
+                  </div>
+                </div>
+              </ResizablePanel>
+            </>
+          )}
         </>
       )}
     </ResizablePanelGroup>

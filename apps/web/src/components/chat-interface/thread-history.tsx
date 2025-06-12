@@ -275,4 +275,64 @@ export function ThreadHistoryComponent(props: ThreadHistoryProps) {
   );
 }
 
+// 
+
+export function ProjectHistoryComponent(props: ThreadHistoryProps) {
+  const { toast } = useToast();
+  const {
+    graphData: { setMessages, switchSelectedThread },
+  } = useGraphContext();
+  const { deleteThread, getUserThreads, userThreads, isUserThreadsLoading } =
+    useThreadContext();
+  const { user } = useUserContext();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window == "undefined" || userThreads.length || !user) return;
+
+    getUserThreads();
+  }, [user]);
+
+  const handleDeleteThread = async (id: string) => {
+    if (!user) {
+      toast({
+        title: "Failed to delete thread",
+        description: "User not found",
+        duration: 5000,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await deleteThread(id, () => setMessages([]));
+  };
+
+  const groupedThreads = groupThreads(
+    userThreads,
+    (thread) => {
+      switchSelectedThread(thread);
+      props.switchSelectedThreadCallback(thread);
+      setOpen(false);
+    },
+    handleDeleteThread
+  );
+
+  return (
+    <div className="h-[calc(100vh-100px)] overflow-y-auto w-full">
+      {isUserThreadsLoading && !userThreads.length ? (
+        <div className="flex flex-col gap-1 px-2 pt-3">
+          {Array.from({ length: 25 }).map((_, i) => (
+            <LoadingThread key={`loading-thread-${i}`} />
+          ))}
+        </div>
+      ) : !userThreads.length ? (
+        <p className="px-3 text-gray-500">没有历史记录</p>
+      ) : (
+        <ThreadsList groupedThreads={groupedThreads} />
+      )}
+    </div>
+  );
+}
+
+
 export const ThreadHistory = React.memo(ThreadHistoryComponent);
