@@ -9,6 +9,7 @@ import { UserProvider } from "@/contexts/UserContext";
 import { ThreadProvider } from "@/contexts/ThreadProvider";
 import { AssistantProvider } from "@/contexts/AssistantContext";
 import { GraphProvider } from "@/contexts/GraphContext";
+import { Suspense } from "react";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,9 +35,9 @@ export default function RootLayout({
                 <GraphProvider>
                   <ModelProvider>
                     <Header />
-                    <main className="flex-1">
-                      {children}
-                    </main>
+                    <Suspense fallback={<div>Loading...</div>}>
+                      <main className="flex-1">{children}</main>
+                    </Suspense>
                   </ModelProvider>
                 </GraphProvider>
               </AssistantProvider>
