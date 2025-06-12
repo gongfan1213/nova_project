@@ -391,7 +391,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
           />
         )}
       </div>
-      <CustomQuickActions
+      {/* <CustomQuickActions
         streamMessage={streamMessage}
         assistantId={selectedAssistant?.assistant_id}
         user={user}
@@ -411,7 +411,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
             currentArtifactContent.language as ProgrammingLanguageOptions
           }
         />
-      ) : null}
+      ) : null} */}
     </div>
   );
 }

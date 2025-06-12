@@ -99,7 +99,7 @@ Latest existing content (index 3): { type: 'text', full_markdown: '...' }
 Skipping duplicate content (type: text): {
   newContentLength: 1234,
   existingContentLength: 1234,
-  title: 'Generated Content'
+  title: 'Generated Artifact'
 }
 All contents are duplicates, skipping insertion
 ```

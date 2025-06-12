@@ -81,3 +81,22 @@ export interface ModelConfig {
     azureOpenAIBasePath?: string;
   };
 }
+
+// 背景数据相关类型定义
+export interface BgDataItem {
+  id: string;
+  name: string;
+  description: string;
+  content: string; // 统一使用 content 存储所有具体内容
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BackgroundData {
+  personalities: BgDataItem[];
+  intentions: BgDataItem[];
+  resources: BgDataItem[];
+  accountStyles: BgDataItem[];
+}
+
+export type BgDataType = 'personalities' | 'intentions' | 'resources' | 'accountStyles'

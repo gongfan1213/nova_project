@@ -220,6 +220,8 @@ export default function ModelSelector({
     (m) => m.config.provider === "groq"
   );
 
+  return null;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger

@@ -17,6 +17,7 @@ import { ThreadWelcome } from "./welcome";
 import { useUserContext } from "@/contexts/UserContext";
 import { useThreadContext } from "@/contexts/ThreadProvider";
 import { useAssistantContext } from "@/contexts/AssistantContext";
+import { UserBgBox } from "../user-background-box";
 
 const ThreadScrollToBottom: FC = () => {
   return (
@@ -180,6 +181,7 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
                 userId={props.userId}
                 searchEnabled={props.searchEnabled}
               />
+              <UserBgBox />
             </div>
           )}
         </div>

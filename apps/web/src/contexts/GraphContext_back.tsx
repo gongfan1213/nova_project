@@ -328,7 +328,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                       contents: [{
                         index: 1,
                         type: "text" as const, // 这里可以根据内容判断是code还是text
-                        title: "Generated Content",
+                        title: "Generated Artifact",
                         fullMarkdown: artifactContent,
                       }],
                     };
@@ -489,7 +489,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                     contents: [{
                       index: 1,
                       type: "text" as const,
-                      title: "Generated Content",
+                      title: "Generated Artifact",
                       fullMarkdown: artifactContent,
                     }],
                   };
