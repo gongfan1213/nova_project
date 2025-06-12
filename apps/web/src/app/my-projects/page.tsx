@@ -427,7 +427,7 @@ const MyProjects = () => {
                     </span>
                   </div>
                   <div className="hidden group-hover:flex items-center justify-end w-full space-x-1">
-                    <Link href={`/editor/${project.id}`}>
+                    <Link href={`/?threadId=${project.id}`}>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50">
                         <Edit3 size={14} />
                       </Button>
