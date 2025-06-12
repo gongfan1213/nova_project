@@ -14,42 +14,76 @@ import NewTagDialog from "@/components/NewTagDialog";
 import Link from "next/link";
 import { createSupabaseClient } from "@/lib/supabase/client";
 
-const supabase = createSupabaseClient();
-const USER_ID = "f53ad801-aeef-4d39-9dbc-4042717ee508";
-
 const MyProjects = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("全部");
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-
-  // const [tags, setTags] = useState(["全部", "科技", "传媒", "灯", "生活方式", "美妆", "旅行"]);
   const [tags, setTags] = useState<string[]>(["全部"]);
-
-  // const [projects, setProjects] = useState([
-  //   { id: "1", title: "iPhone 15 Pro深度评测", description: "全面解析iPhone 15 Pro的设计、性能、摄影等特性，为用户提供购买决策建议", status: "已完成", category: "科技", lastModified: "2024-06-06", statusColor: "bg-green-100 text-green-800" },
-  //   { id: "2", title: "夏日护肤攻略", description: "分享夏季护肤的关键要点，推荐适合的护肤产品和防晒步骤", status: "草稿", category: "美妆", lastModified: "2024-06-05", statusColor: "bg-yellow-100 text-yellow-800" },
-  //   { id: "3", title: "职场新人必备指南", description: "为初入职场的新人提供实用建议，包括工作技巧、人际关系等", status: "进行中", category: "灯", lastModified: "2024-06-04", statusColor: "bg-blue-100 text-blue-800" },
-  //   { id: "4", title: "成都美食探店", description: "探索成都地道美食，分享隐藏的美食店铺和特色菜品", status: "已完成", category: "旅行", lastModified: "2024-06-03", statusColor: "bg-green-100 text-green-800" }
-  // ]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const supabase = createSupabaseClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   // 拉取标签
   const fetchTags = async () => {
-    const { data } = await supabase.from("tags").select("name").eq("user_id", USER_ID);
-    setTags(["全部", ...(data?.map(t => t.name) || [])]);
+    if (!userId) return;
+    const { data } = await supabase.from('tags').select('name').eq('user_id', userId);
+    setTags(['全部', ...(data?.map(t => t.name) || [])]);
   };
-  // 拉取项目
+  // 拉取项目（改为 threads/artifacts/artifact_contents 三级联查）
   const fetchProjects = async () => {
-    const { data } = await supabase.from("projects").select("*").eq("user_id", USER_ID).order("created_at", { ascending: false });
-    setProjects(data || []);
+    if (!userId) return;
+    console.log('当前userId:', userId);
+    const { data: threads, error } = await supabase
+      .from('threads')
+      .select(`
+        id,
+        title,
+        updated_at,
+        artifacts (
+          id,
+          artifact_contents (
+            id,
+            full_markdown,
+            code,
+            index
+          )
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('threads查询出错:', error);
+    }
+    console.log('threads原始数据:', threads);
+    const projects = (threads || []).map(thread => {
+      const artifact = thread.artifacts?.[0];
+      const content = artifact?.artifact_contents?.[0];
+      const desc = content?.full_markdown || content?.code || '';
+      return {
+        id: thread.id,
+        title: thread.title || '',
+        updated_at: thread.updated_at,
+        description: desc.slice(0, 20),
+      };
+    });
+    setProjects(projects);
+    console.log('所有项目标题:', projects.map(p => p.title));
   };
 
-  useEffect(() => { fetchTags(); fetchProjects(); }, []);
+  useEffect(() => { if (userId) { fetchTags(); fetchProjects(); } }, [userId]);
 
   // 删除标签
   const handleDeleteTag = async (tagName: string) => {
-    await supabase.from("tags").delete().eq("user_id", USER_ID).eq("name", tagName);
+    await supabase.from('tags').delete().eq('user_id', userId).eq('name', tagName);
     fetchTags();
   };
 
@@ -81,7 +115,7 @@ const MyProjects = () => {
     const { data: sameTitleProjects } = await supabase
       .from("projects")
       .select("id")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .like("title", `${project.title}%`);
     let newTitle = project.title + "01";
     if (sameTitleProjects && sameTitleProjects.length > 0) {
@@ -96,7 +130,7 @@ const MyProjects = () => {
         status: project.status,
         tags: project.tags,
         category: project.category,
-        user_id: USER_ID,
+        user_id: userId,
       },
     ]);
     fetchProjects();

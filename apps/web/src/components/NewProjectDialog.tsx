@@ -46,9 +46,9 @@ const NewProjectDialog = ({ onProjectCreated, availableTags }: NewProjectDialogP
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-red-500 hover:bg-red-600 text-white">
+        {/* <Button className="bg-red-500 hover:bg-red-600 text-white">
           新建项目
-        </Button>
+        </Button> */}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
