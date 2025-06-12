@@ -154,7 +154,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     if (updateRenderedArtifactRequired) return;
     
     // 如果 artifact 已经保存，不需要再次保存
-    if (isArtifactSaved) return;
+    // if (isArtifactSaved) return;
     
     const currentIndex = artifact.currentIndex;
     const currentContent = artifact.contents.find(
