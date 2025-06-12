@@ -14,10 +14,13 @@ import { getArtifactContent } from "@opencanvas/shared/utils/artifacts";
 import { useGraphContext } from "@/contexts/GraphContext";
 import React from "react";
 import { TooltipIconButton } from "../ui/assistant-ui/tooltip-icon-button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { Textarea } from "../ui/textarea";
 import { cn } from "@/lib/utils";
+import { XiaohongshuPopover } from '@/components/xiaohongshu/XiaohongshuPopover';
+import { MyNotePopover } from '@/components/MyNotePopover';
+import { StickyNote } from 'lucide-react';
 
 const cleanText = (text: string) => {
   return text.replaceAll("\\\n", "\n");
@@ -76,6 +79,8 @@ export function TextRendererComponent(props: TextRendererProps) {
   const [isRawView, setIsRawView] = useState(false);
   const [manuallyUpdatingArtifact, setManuallyUpdatingArtifact] =
     useState(false);
+  const [openXhs, setOpenXhs] = useState(false);
+  const [openNote, setOpenNote] = useState(false);
 
   useEffect(() => {
     const selectedText = editor.getSelectedText();
@@ -250,8 +255,30 @@ export function TextRendererComponent(props: TextRendererProps) {
     <div className="w-full h-full mt-2 flex flex-col border-t-[1px] border-gray-200 overflow-y-auto py-5 relative">
       {props.isHovering && artifact && (
         <div className="absolute flex gap-2 top-2 right-4 z-10">
+          <div className="relative">
+            <TooltipIconButton
+              tooltip="我的笔记"
+              variant="outline"
+              delayDuration={400}
+              onClick={() => setOpenNote(v => !v)}
+            >
+              <StickyNote className="w-5 h-5 text-gray-600" />
+            </TooltipIconButton>
+            <MyNotePopover open={openNote} onClose={() => setOpenNote(false)} />
+          </div>
           <CopyText currentArtifactContent={getArtifactContent(artifact)} />
           <ViewRawText isRawView={isRawView} setIsRawView={setIsRawView} />
+          <div className="relative">
+            <TooltipIconButton
+              tooltip="小红书文章"
+              variant="outline"
+              delayDuration={400}
+              onClick={() => setOpenXhs((v) => !v)}
+            >
+              <BookOpen className="w-5 h-5 text-gray-600" />
+            </TooltipIconButton>
+            <XiaohongshuPopover open={openXhs} onClose={() => setOpenXhs(false)} />
+          </div>
         </div>
       )}
       {isRawView ? (

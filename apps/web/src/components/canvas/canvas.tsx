@@ -29,8 +29,11 @@ import {
 import { CHAT_COLLAPSED_QUERY_PARAM } from "@/constants";
 import { useRouter, useSearchParams } from "next/navigation";
 import MyNoteDialog from "@/components/MyNoteDialog";
+import { createSupabaseClient } from "@/lib/supabase/client";
 
-export function CanvasComponent() {
+const supabase = createSupabaseClient();
+
+export function CanvasComponent({ projectId }: { projectId?: string }) {
   const { graphData } = useGraphContext();
   const { setModelName, setModelConfig } = useThreadContext();
   const { setArtifact, chatStarted, setChatStarted } = graphData;
@@ -42,6 +45,7 @@ export function CanvasComponent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const chatCollapsedSearchParam = searchParams.get(CHAT_COLLAPSED_QUERY_PARAM);
+
   useEffect(() => {
     try {
       if (chatCollapsedSearchParam) {
@@ -54,6 +58,69 @@ export function CanvasComponent() {
       router.replace(`?${queryParams.toString()}`, { scroll: false });
     }
   }, [chatCollapsedSearchParam]);
+
+  // 加载项目内容
+  useEffect(() => {
+    const loadProject = async () => {
+      if (projectId) {
+        try {
+          const { data: project, error } = await supabase
+            .from("projects")
+            .select("*")
+            .eq("id", projectId)
+            .single();
+
+          if (error) throw error;
+
+          // 日志：打印项目内容
+          console.log('加载到的项目内容:', project);
+
+          // 兼容 content 可能为 JSON 或 markdown
+          let fullMarkdown = '';
+          if (typeof project.content === 'string') {
+            try {
+              // 尝试解析为 JSON，如果失败则直接用字符串
+              const parsed = JSON.parse(project.content);
+              if (typeof parsed === 'string') {
+                fullMarkdown = parsed;
+              } else if (parsed && parsed.fullMarkdown) {
+                fullMarkdown = parsed.fullMarkdown;
+              } else {
+                fullMarkdown = project.content;
+              }
+            } catch {
+              fullMarkdown = project.content;
+            }
+          }
+
+          const artifactContent: ArtifactMarkdownV3 = {
+            index: 1,
+            type: "text",
+            title: project.title,
+            fullMarkdown,
+          };
+
+          const newArtifact: ArtifactV3 = {
+            currentIndex: 1,
+            contents: [artifactContent],
+          };
+
+          setArtifact(newArtifact);
+          setChatStarted(true);
+          setIsEditing(true);
+        } catch (error) {
+          console.error("Error loading project:", error);
+          toast({
+            title: "加载失败",
+            description: "无法加载项目内容",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    loadProject();
+  }, [projectId, setArtifact, setChatStarted, toast]);
 
   const handleQuickStart = (
     type: "text" | "code",
@@ -100,9 +167,6 @@ export function CanvasComponent() {
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-screen">
-      <div className="fixed top-[80px] right-[160px] z-50">
-      {chatStarted && <MyNoteDialog />}
-      </div>
       {!chatStarted && (
         <NoSSRWrapper>
           <ContentComposerChatInterface
