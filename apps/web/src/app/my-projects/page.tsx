@@ -235,7 +235,7 @@ const MyProjects = () => {
             />
           </div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gray-50 rounded-xl px-4 py-3 shadow-sm mb-6">
-            <div className="flex flex-wrap gap-2">
+            {/* <div className="flex flex-wrap gap-2">
               {tags.map((filter) => (
                 <div key={filter} className="relative group">
                   <Button
@@ -264,7 +264,7 @@ const MyProjects = () => {
             <div className="flex gap-3">
               <NewProjectDialog onProjectCreated={fetchProjects} availableTags={tags} />
               <ProjectManageDialog projects={projects} onProjectsChanged={fetchProjects} />
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -334,7 +334,7 @@ const MyProjects = () => {
                     <span className="text-xs text-gray-500 group-hover:hidden">
                       最后修改: {project.updated_at ? project.updated_at.slice(0, 10) : ""}
                     </span>
-                    <span className="flex gap-1 ml-2 items-center">
+                    {/* <span className="flex gap-1 ml-2 items-center">
                       {(project.tags || '').split(',').filter(Boolean).map((tag: string, idx: number) => (
                         <span
                           key={idx}
@@ -424,10 +424,10 @@ const MyProjects = () => {
                           </div>
                         </DialogContent>
                       </Dialog>
-                    </span>
+                    </span> */}
                   </div>
                   <div className="hidden group-hover:flex items-center justify-end w-full space-x-1">
-                    <Link href={`/editor/${project.id}`}>
+                    <Link href={`/?threadId=${project.id}`}>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50">
                         <Edit3 size={14} />
                       </Button>
