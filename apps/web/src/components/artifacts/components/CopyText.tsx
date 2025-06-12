@@ -20,7 +20,7 @@ export function CopyText(props: CopyTextProps) {
       transition={{ duration: 0.2 }}
     >
       <TooltipIconButton
-        tooltip="Copy"
+        tooltip="复制"
         variant="outline"
         className="transition-colors"
         delayDuration={400}
