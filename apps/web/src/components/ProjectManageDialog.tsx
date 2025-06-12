@@ -57,9 +57,9 @@ const ProjectManageDialog = ({ projects, onProjectsChanged }: ProjectManageDialo
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="border-gray-300 text-gray-700">
+        {/* <Button variant="outline" className="border-gray-300 text-gray-700">
           管理项目
-        </Button>
+        </Button> */}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
