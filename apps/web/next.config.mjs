@@ -6,6 +6,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true, // 忽略 TypeScript 检查
   },
+  experimental: {
+    missingSuspenseWithCSRBailout: false, // 忽略 useSearchParams Suspense 警告
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.output.globalObject = 'self';
