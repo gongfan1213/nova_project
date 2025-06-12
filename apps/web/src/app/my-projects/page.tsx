@@ -144,7 +144,7 @@ const MyProjects = () => {
 
   // 单个项目删除
   const handleDeleteProject = async (projectId: string) => {
-    await supabase.from("projects").delete().eq("id", projectId);
+    await supabase.from("threads").delete().eq("id", projectId);
     fetchProjects();
   };
 

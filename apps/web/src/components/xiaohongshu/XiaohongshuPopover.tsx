@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { XiaohongshuCard } from './XiaohongshuCard'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
 function EditDialog({ open, article, onClose, onSave }) {
   const [title, setTitle] = useState('')
@@ -11,7 +12,7 @@ function EditDialog({ open, article, onClose, onSave }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-[340px]">
+      <div className="bg-white rounded-xl shadow-xl p-6 w-[900px]">
         <div className="font-bold text-lg mb-4">编辑草稿</div>
         <div className="mb-3">
           <input
@@ -21,7 +22,7 @@ function EditDialog({ open, article, onClose, onSave }) {
             placeholder="标题"
           />
           <textarea
-            className="w-full border rounded px-2 py-1 min-h-[60px]"
+            className="w-full border rounded px-2 py-1 min-h-[500px]"
             value={content}
             onChange={e => setContent(e.target.value)}
             placeholder="正文内容"
@@ -47,15 +48,48 @@ export function XiaohongshuPopover({ open, onClose, projectId }: { open: boolean
   const [editingArticle, setEditingArticle] = useState<any>(null)
   const [copyingId, setCopyingId] = useState<string | null>(null)
 
-  const fetchArticles = () => {
+  // 新增：Supabase 查询草稿
+  const fetchArticles = async () => {
     if (open && projectId) {
       setLoading(true)
-      fetch(`/api/projects/${projectId}/xiaohongshu`).then(res => res.json()).then(data => {
-        setArticles(data || [])
-        console.log(data)
+      const supabase = createSupabaseClient()
+      // 1. 查找当前 thread（projectId）下所有 artifacts
+      const { data: artifacts, error: artifactsError } = await supabase
+        .from('artifacts')
+        .select('id, updated_at')
+        .eq('thread_id', projectId)
+        .order('updated_at', { ascending: false })
+      if (artifactsError || !artifacts || artifacts.length === 0) {
+        setArticles([])
         setLoading(false)
-      })
-    } else if (!open) {
+        return
+      }
+      // 2. 查找所有 artifact 下的所有 artifact_content
+      const artifactIds = artifacts.map(a => a.id)
+      const { data: artifactContents } = await supabase
+        .from('artifact_contents')
+        .select('*')
+        .in('artifact_id', artifactIds)
+        .order('artifact_id', { ascending: false })
+        .order('index', { ascending: false })
+      if (!artifactContents || artifactContents.length === 0) {
+        setArticles([])
+        setLoading(false)
+        return
+      }
+      // 3. 组装 articles，每个 artifact_content 都是一条草稿
+      const articles = artifactContents.map(ac => ({
+        id: ac.artifact_id, // 这里用 artifact_id 作为唯一标识
+        title: ac.title,
+        description: ac.full_markdown?.slice(0, 20) || '',
+        content: ac.full_markdown,
+        updated_at: ac.created_at,
+        status: '草稿',
+        category: '',
+      }))
+      setArticles(articles)
+      setLoading(false)
+    } else {
       setArticles([])
     }
   }
@@ -66,48 +100,62 @@ export function XiaohongshuPopover({ open, onClose, projectId }: { open: boolean
   }, [open, projectId])
 
   // 删除草稿
-  const handleDelete = async (article) => {
+  const handleDelete = async (article: { id: string }) => {
     if (!window.confirm('确定要删除这篇草稿吗？')) return
-    await fetch(`/api/xiaohongshu-articles/${article.id}`, { method: 'DELETE' })
-    fetchArticles()
+    try {
+      const supabase = createSupabaseClient()
+      // 删除 artifact 会自动级联删除相关的 artifact_contents
+      const { error } = await supabase
+        .from('artifacts')
+        .delete()
+        .eq('id', article.id)
+      
+      if (error) {
+        throw new Error('删除失败')
+      }
+      fetchArticles()
+    } catch (e: any) {
+      alert('删除失败: ' + (e?.message || e))
+    }
   }
 
   // 复制草稿
-  const handleCopy = async (article) => {
+  const handleCopy = async (article: { id: string; title: string; content: string; category?: string }) => {
     setCopyingId(article.id)
     try {
-      const baseTitle = article.title.replace(/\d+$/, '')
-      const res = await fetch(`/api/projects/${article.project_id || projectId}/xiaohongshu`)
-      let allArticles = await res.json()
-      if (!Array.isArray(allArticles)) allArticles = []
-      const sameTitleArticles = allArticles.filter(a => {
-        const match = a.title.match(new RegExp(`^${baseTitle}(\\d+)$`))
-        return match || a.title === baseTitle
-      })
-      let newTitle = baseTitle + '01'
-      if (sameTitleArticles && sameTitleArticles.length > 0) {
-        const count = sameTitleArticles.length + 1
-        newTitle = baseTitle + count.toString().padStart(2, '0')
+      const supabase = createSupabaseClient()
+      const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : null
+      if (!user) {
+        throw new Error('用户未登录')
       }
-      const resp = await fetch(`/api/xiaohongshu-articles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: article.project_id || projectId,
-          title: newTitle,
-          description: article.description,
-          content: article.content,
-          status: article.status,
-          category: article.category,
+      // 1. 新建 artifact，thread_id 用当前 projectId，user_id 必须传
+      const { data: newArtifact, error: artifactError } = await supabase
+        .from('artifacts')
+        .insert({
+          thread_id: projectId,
+          user_id: user.id,
+          current_index: 1
         })
-      })
-      if (!resp.ok) {
-        const err = await resp.json()
-        alert('复制失败: ' + (err.error || resp.statusText))
-      } else {
-        fetchArticles()
+        .select()
+        .single()
+      if (artifactError || !newArtifact) {
+        throw new Error('创建新草稿内容失败')
       }
-    } catch (e) {
+      // 2. 新建 artifact_content，内容与当前 article 一致
+      const { error: contentError } = await supabase
+        .from('artifact_contents')
+        .insert({
+          artifact_id: newArtifact.id,
+          index: 1,
+          type: 'text',
+          title: article.title,
+          full_markdown: article.content
+        })
+      if (contentError) {
+        throw new Error('复制草稿内容失败')
+      }
+      fetchArticles()
+    } catch (e: any) {
       alert('复制失败: ' + (e?.message || e))
     } finally {
       setCopyingId(null)
@@ -115,22 +163,34 @@ export function XiaohongshuPopover({ open, onClose, projectId }: { open: boolean
   }
 
   // 编辑草稿弹窗
-  const handleEdit = (article) => {
+  const handleEdit = (article: { id: string; title: string; content: string }) => {
     setEditingArticle(article)
     setEditOpen(true)
   }
-  const handleEditSave = async (newArticle) => {
-    await fetch(`/api/xiaohongshu-articles/${newArticle.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: newArticle.title,
-        content: newArticle.content,
-      })
-    })
-    setEditOpen(false)
-    setEditingArticle(null)
-    fetchArticles()
+
+  const handleEditSave = async (newArticle: { id: string; title: string; content: string }) => {
+    try {
+      const supabase = createSupabaseClient()
+      // 更新 artifact_contents 中的内容
+      const { error } = await supabase
+        .from('artifact_contents')
+        .update({
+          title: newArticle.title,
+          full_markdown: newArticle.content
+        })
+        .eq('artifact_id', newArticle.id)
+        .eq('index', 1)
+
+      if (error) {
+        throw new Error('保存失败')
+      }
+
+      setEditOpen(false)
+      setEditingArticle(null)
+      fetchArticles()
+    } catch (e: any) {
+      alert('保存失败: ' + (e?.message || e))
+    }
   }
 
   if (!open) return null
@@ -156,7 +216,7 @@ export function XiaohongshuPopover({ open, onClose, projectId }: { open: boolean
         ) : articles.length === 0 ? (
           <div className="text-gray-400 text-center py-8">暂无草稿</div>
         ) : (
-          articles.map((article, idx) => (
+          (Array.isArray(articles) ? articles : []).map((article, idx) => (
             <XiaohongshuCard
               key={article.id || idx}
               article={article}

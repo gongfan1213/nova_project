@@ -156,6 +156,9 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 如果需要更新渲染状态，等待渲染完成后再保存
     if (updateRenderedArtifactRequired) return;
     
+    // 如果 artifact 已经保存，不需要再次保存
+    if (isArtifactSaved) return;
+    
     const currentIndex = artifact.currentIndex;
     const currentContent = artifact.contents.find(
       (c) => c.index === currentIndex
@@ -177,10 +180,9 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       !lastSavedArtifact.current ||
       JSON.stringify(lastSavedArtifact.current.contents) !== JSON.stringify(artifact.contents)
     ) {
-      setIsArtifactSaved(false);
       debouncedAPIUpdate(artifact, threadData.threadId);
     }
-  }, [artifact, threadData.threadId, isStreaming, threadSwitched, updateRenderedArtifactRequired]);
+  }, [artifact, threadData.threadId, isStreaming, threadSwitched, updateRenderedArtifactRequired, isArtifactSaved]);
 
   const searchOrCreateEffectRan = useRef(false);
 

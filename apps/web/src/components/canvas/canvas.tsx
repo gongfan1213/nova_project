@@ -64,39 +64,41 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
     const loadProject = async () => {
       if (projectId) {
         try {
-          const { data: project, error } = await supabase
-            .from("projects")
-            .select("*")
+          const { data: thread, error } = await supabase
+            .from("threads")
+            .select(`
+              id,
+              title,
+              artifacts (
+                id,
+                artifact_contents (
+                  id,
+                  full_markdown,
+                  code,
+                  index
+                )
+              )
+            `)
             .eq("id", projectId)
             .single();
 
           if (error) throw error;
 
           // 日志：打印项目内容
-          console.log('加载到的项目内容:', project);
+          console.log('加载到的项目内容:', thread);
 
-          // 兼容 content 可能为 JSON 或 markdown
-          let fullMarkdown = '';
-          if (typeof project.content === 'string') {
-            try {
-              // 尝试解析为 JSON，如果失败则直接用字符串
-              const parsed = JSON.parse(project.content);
-              if (typeof parsed === 'string') {
-                fullMarkdown = parsed;
-              } else if (parsed && parsed.fullMarkdown) {
-                fullMarkdown = parsed.fullMarkdown;
-              } else {
-                fullMarkdown = project.content;
-              }
-            } catch {
-              fullMarkdown = project.content;
-            }
+          const artifact = thread.artifacts?.[0];
+          let content = null;
+          if (artifact?.artifact_contents && artifact.artifact_contents.length > 0) {
+            // 按 index 降序排序，取 index 最大的那条
+            content = [...artifact.artifact_contents].sort((a, b) => b.index - a.index)[0];
           }
+          const fullMarkdown = content?.full_markdown || content?.code || '';
 
           const artifactContent: ArtifactMarkdownV3 = {
             index: 1,
             type: "text",
-            title: project.title,
+            title: thread.title,
             fullMarkdown,
           };
 

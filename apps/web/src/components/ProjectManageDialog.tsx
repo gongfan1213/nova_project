@@ -46,7 +46,7 @@ const ProjectManageDialog = ({ projects, onProjectsChanged }: ProjectManageDialo
   const handleDelete = async () => {
     if (selectedProjects.length > 0) {
       setLoading(true);
-      await supabase.from("projects").delete().in("id", selectedProjects);
+      await supabase.from("threads").delete().in("id", selectedProjects);
       setLoading(false);
       setSelectedProjects([]);
       setOpen(false);

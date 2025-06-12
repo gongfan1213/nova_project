@@ -24,16 +24,67 @@ const NewProjectDialog = ({ onProjectCreated, availableTags }: NewProjectDialogP
   const handleSubmit = async () => {
     if (title.trim() && description.trim() && category) {
       setLoading(true);
-      await supabase.from("projects").insert([
-        {
-          title: title.trim(),
-          description: description.trim(),
-          content: description.trim(),
-          status: "草稿",
-          category,
-          user_id: USER_ID,
-        },
-      ]);
+      // 创建 thread
+      const { data: thread, error: threadError } = await supabase
+        .from("threads")
+        .insert([
+          {
+            title: title.trim(),
+            user_id: USER_ID,
+            status: "草稿",
+            metadata: {
+              category,
+              description: description.trim()
+            }
+          }
+        ])
+        .select()
+        .single();
+
+      if (threadError) {
+        console.error("Error creating thread:", threadError);
+        setLoading(false);
+        return;
+      }
+
+      // 创建 artifact
+      const { data: artifact, error: artifactError } = await supabase
+        .from("artifacts")
+        .insert([
+          {
+            thread_id: thread.id,
+            user_id: USER_ID,
+            current_index: 1
+          }
+        ])
+        .select()
+        .single();
+
+      if (artifactError) {
+        console.error("Error creating artifact:", artifactError);
+        setLoading(false);
+        return;
+      }
+
+      // 创建 artifact_content
+      const { error: contentError } = await supabase
+        .from("artifact_contents")
+        .insert([
+          {
+            artifact_id: artifact.id,
+            index: 1,
+            type: "text",
+            title: title.trim(),
+            full_markdown: description.trim()
+          }
+        ]);
+
+      if (contentError) {
+        console.error("Error creating artifact content:", contentError);
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
       setTitle("");
       setDescription("");
