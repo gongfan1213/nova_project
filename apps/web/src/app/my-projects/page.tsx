@@ -342,7 +342,7 @@ const MyProjects = () => {
                             'px-2 py-0.5 rounded text-xs font-medium cursor-pointer ' +
                             (tag === '未分类'
                               ? 'bg-gray-100 text-gray-500'
-                              : 'bg-blue-100 text-blue-800')
+                              : 'bg-red-100 text-red-800')
                           }
                           onClick={() => openTagDialog(project)}
                         >
@@ -364,7 +364,7 @@ const MyProjects = () => {
                             {selectedTags.map(tag => (
                               <span
                                 key={tag}
-                                className="relative bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm font-medium cursor-pointer flex items-center"
+                                className="relative bg-red-100 text-red-800 px-3 py-1 rounded text-sm font-medium cursor-pointer flex items-center"
                                 onClick={() => handleSelectTag(tag)}
                                 style={{ minWidth: 60 }}
                               >
@@ -386,10 +386,10 @@ const MyProjects = () => {
                                 className={
                                   'relative px-3 py-1 rounded text-sm font-medium cursor-pointer flex items-center ' +
                                   (selectedTags.includes(tag)
-                                    ? 'bg-blue-100 text-blue-800'
+                                    ? 'bg-red-100 text-red-800'
                                     : tag === '未分类'
                                     ? 'bg-gray-100 text-gray-500'
-                                    : 'bg-gray-50 text-gray-700 hover:bg-blue-50')
+                                    : 'bg-gray-50 text-gray-700 hover:bg-red-50')
                                 }
                                 onClick={() => handleSelectTag(tag)}
                                 style={{ minWidth: 60 }}
@@ -414,13 +414,13 @@ const MyProjects = () => {
                               onChange={e => setNewTag(e.target.value)}
                               onKeyDown={e => e.key === 'Enter' && handleCreateTag()}
                             />
-                            <button className="bg-blue-500 text-white px-4 py-2 rounded text-sm flex items-center gap-1" onClick={handleCreateTag}>
+                            <button className="bg-red-500 text-white px-4 py-2 rounded text-sm flex items-center gap-1" onClick={handleCreateTag}>
                               <Plus size={16} /> 新建
                             </button>
                           </div>
                           <div className="flex justify-end gap-2">
                             <button className="px-5 py-2 rounded border text-base" onClick={() => setTagDialogOpen(null)}>取消</button>
-                            <button className="px-5 py-2 rounded bg-blue-500 text-white text-base" onClick={handleSaveTags}>保存</button>
+                            <button className="px-5 py-2 rounded bg-red-500 text-white text-base" onClick={handleSaveTags}>保存</button>
                           </div>
                         </DialogContent>
                       </Dialog>
