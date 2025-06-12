@@ -1,10 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { createSupabaseClient } from "@/lib/supabase/client";
-
-const USER_ID = "f53ad801-aeef-4d39-9dbc-4042717ee508";
 
 interface NewTagDialogProps {
   onTagCreated?: () => void;
@@ -14,16 +12,31 @@ const NewTagDialog = ({ onTagCreated }: NewTagDialogProps) => {
   const [open, setOpen] = useState(false);
   const [tagName, setTagName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const supabase = createSupabaseClient();
 
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
+
   const handleSubmit = async () => {
+    if (!userId) {
+      alert('请先登录');
+      return;
+    }
     if (tagName.trim()) {
       setLoading(true);
-      await supabase.from("tags").insert([{ name: tagName.trim(), user_id: USER_ID }]);
+      await supabase.from("tags").insert([{ name: tagName.trim(), user_id: userId }]);
       setLoading(false);
       setTagName("");
       setOpen(false);
-      onTagCreated && onTagCreated();
+      if (onTagCreated) {
+        setTimeout(() => { onTagCreated() }, 300);
+      }
     }
   };
 

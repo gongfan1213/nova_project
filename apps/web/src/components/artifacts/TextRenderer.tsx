@@ -178,6 +178,20 @@ export function TextRendererComponent(props: TextRendererProps) {
     }
   }, [isRawView, editor]);
 
+  useEffect(() => {
+    if (!artifact) return;
+    const currentIndex = artifact.currentIndex;
+    const currentContent = artifact.contents.find(
+      (c) => c.index === currentIndex && c.type === "text"
+    );
+    if (!currentContent) return;
+    // 只要artifact变化就同步fullMarkdown
+    (async () => {
+      const markdownAsBlocks = await editor.tryParseMarkdownToBlocks(currentContent.fullMarkdown);
+      editor.replaceBlocks(editor.document, markdownAsBlocks);
+    })();
+  }, [artifact]);
+
   const isComposition = useRef(false);
 
   const onChange = async () => {
@@ -251,6 +265,26 @@ export function TextRendererComponent(props: TextRendererProps) {
       }
     });
   };
+
+  const handleXhsEditToCanvas = (content: string) => {
+    setArtifact(prev => {
+      const prevContent = prev?.contents?.[0]?.fullMarkdown
+      if (!prev || prevContent !== content) {
+        return {
+          currentIndex: 1,
+          contents: [
+            {
+              index: 1,
+              type: 'text',
+              title: '小红书草稿',
+              fullMarkdown: content,
+            },
+          ],
+        }
+      }
+      return prev
+    })
+  }
 
   return (
     <div className="w-full h-full mt-2 flex flex-col border-t-[1px] border-gray-200 overflow-y-auto py-5 relative">

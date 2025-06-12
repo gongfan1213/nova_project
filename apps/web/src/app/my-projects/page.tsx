@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Edit3, Copy, Trash2 } from "lucide-react";
+import { Edit3, Copy, Trash2, Tag as TagIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 // import styles from "@/styles/MyProjects.module.css";
 // import Header from "@/components/Header";
 import NewProjectDialog from "@/components/NewProjectDialog";
@@ -13,49 +14,137 @@ import ProjectManageDialog from "@/components/ProjectManageDialog";
 import NewTagDialog from "@/components/NewTagDialog";
 import Link from "next/link";
 import { createSupabaseClient } from "@/lib/supabase/client";
-
-const supabase = createSupabaseClient();
-const USER_ID = "f53ad801-aeef-4d39-9dbc-4042717ee508";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 const MyProjects = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("全部");
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-
-  // const [tags, setTags] = useState(["全部", "科技", "传媒", "灯", "生活方式", "美妆", "旅行"]);
   const [tags, setTags] = useState<string[]>(["全部"]);
-
-  // const [projects, setProjects] = useState([
-  //   { id: "1", title: "iPhone 15 Pro深度评测", description: "全面解析iPhone 15 Pro的设计、性能、摄影等特性，为用户提供购买决策建议", status: "已完成", category: "科技", lastModified: "2024-06-06", statusColor: "bg-green-100 text-green-800" },
-  //   { id: "2", title: "夏日护肤攻略", description: "分享夏季护肤的关键要点，推荐适合的护肤产品和防晒步骤", status: "草稿", category: "美妆", lastModified: "2024-06-05", statusColor: "bg-yellow-100 text-yellow-800" },
-  //   { id: "3", title: "职场新人必备指南", description: "为初入职场的新人提供实用建议，包括工作技巧、人际关系等", status: "进行中", category: "灯", lastModified: "2024-06-04", statusColor: "bg-blue-100 text-blue-800" },
-  //   { id: "4", title: "成都美食探店", description: "探索成都地道美食，分享隐藏的美食店铺和特色菜品", status: "已完成", category: "旅行", lastModified: "2024-06-03", statusColor: "bg-green-100 text-green-800" }
-  // ]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const supabase = createSupabaseClient();
+  const [statusDialogOpen, setStatusDialogOpen] = useState<string | null>(null);
+  const [tagDialogOpen, setTagDialogOpen] = useState<string | null>(null);
+  const [tagSearch, setTagSearch] = useState('');
+  const [tagEditProjectId, setTagEditProjectId] = useState<string | null>(null);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   // 拉取标签
   const fetchTags = async () => {
-    const { data } = await supabase.from("tags").select("name").eq("user_id", USER_ID);
-    setTags(["全部", ...(data?.map(t => t.name) || [])]);
+    if (!userId) return;
+    const { data } = await supabase.from('tags').select('name').eq('user_id', userId);
+    setTags(['全部', ...(data?.map(t => t.name) || [])]);
   };
-  // 拉取项目
+  // 拉取项目（改为 threads/artifacts/artifact_contents 三级联查）
   const fetchProjects = async () => {
-    const { data } = await supabase.from("projects").select("*").eq("user_id", USER_ID).order("created_at", { ascending: false });
-    setProjects(data || []);
+    if (!userId) return;
+    console.log('当前userId:', userId);
+    const { data: threads, error } = await supabase
+      .from('threads')
+      .select(`
+        id,
+        title,
+        status,
+        tags,
+        updated_at,
+        artifacts (
+          id,
+          artifact_contents (
+            id,
+            full_markdown,
+            code,
+            index
+          )
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('threads查询出错:', error);
+    }
+    console.log('threads原始数据:', threads);
+    const projects = (threads || []).map(thread => {
+      const artifact = thread.artifacts?.[0];
+      const content = artifact?.artifact_contents?.[0];
+      const desc = content?.full_markdown || content?.code || '';
+      return {
+        id: thread.id,
+        title: thread.title || '',
+        status: thread.status || '草稿',
+        tags: thread.tags || '',
+        updated_at: thread.updated_at,
+        description: desc.slice(0, 20),
+      };
+    });
+    setProjects(projects);
+    console.log('所有项目标题:', projects.map(p => p.title));
   };
 
-  useEffect(() => { fetchTags(); fetchProjects(); }, []);
+  useEffect(() => { if (userId) { fetchTags(); fetchProjects(); } }, [userId]);
 
-  // 删除标签
-  const handleDeleteTag = async (tagName: string) => {
-    await supabase.from("tags").delete().eq("user_id", USER_ID).eq("name", tagName);
-    fetchTags();
+  // 拉取所有标签
+  const fetchAllTags = async () => {
+    if (!userId) return;
+    const { data } = await supabase.from('tags').select('name').eq('user_id', userId);
+    setAllTags(data?.map(t => t.name) || []);
+  };
+
+  // 打开标签弹窗时初始化
+  const openTagDialog = (project: any) => {
+    setTagDialogOpen(project.id);
+    setTagEditProjectId(project.id);
+    setSelectedTags((project.tags || '').split(',').filter(Boolean));
+    setTagSearch('');
+    setNewTag('');
+    fetchAllTags();
+  };
+
+  const handleSelectTag = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const handleCreateTag = async () => {
+    const tag = newTag.trim();
+    if (!tag || allTags.includes(tag)) return;
+    await supabase.from('tags').insert([{ name: tag, user_id: userId }]);
+    setAllTags([...allTags, tag]);
+    setSelectedTags([...selectedTags, tag]);
+    setNewTag('');
+  };
+
+  const handleDeleteTag = async (tag: string) => {
+    await supabase.from('tags').delete().eq('user_id', userId).eq('name', tag);
+    setAllTags(allTags.filter(t => t !== tag));
+    setSelectedTags(selectedTags.filter(t => t !== tag));
+  };
+
+  const handleSaveTags = async () => {
+    if (!tagEditProjectId) return;
+    await supabase.from('threads').update({ tags: selectedTags.join(',') }).eq('id', tagEditProjectId);
+    setTagDialogOpen(null);
+    fetchProjects();
   };
 
   // 单个项目删除
   const handleDeleteProject = async (projectId: string) => {
-    await supabase.from("projects").delete().eq("id", projectId);
+    await supabase.from("threads").delete().eq("id", projectId);
     fetchProjects();
   };
 
@@ -81,7 +170,7 @@ const MyProjects = () => {
     const { data: sameTitleProjects } = await supabase
       .from("projects")
       .select("id")
-      .eq("user_id", USER_ID)
+      .eq("user_id", userId)
       .like("title", `${project.title}%`);
     let newTitle = project.title + "01";
     if (sameTitleProjects && sameTitleProjects.length > 0) {
@@ -96,11 +185,18 @@ const MyProjects = () => {
         status: project.status,
         tags: project.tags,
         category: project.category,
-        user_id: USER_ID,
+        user_id: userId,
       },
     ]);
     fetchProjects();
   };
+
+  // 修改项目状态
+  const handleStatusChange = async (projectId: string, newStatus: string) => {
+    await supabase.from('threads').update({ status: newStatus }).eq('id', projectId)
+    setStatusDialogOpen(null)
+    fetchProjects()
+  }
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -173,29 +269,60 @@ const MyProjects = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group">
+            <Card
+              key={project.id}
+              className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between mb-3">
                   {editingTitle === project.id ? (
                     <Input
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      // onBlur={handleTitleSave}
-                      // onKeyDown={handleTitleKeyPress}
                       className="text-base font-semibold text-gray-900 transition-colors flex-1"
                       autoFocus
                     />
                   ) : (
                     <CardTitle
                       className="text-base font-semibold text-gray-900 transition-colors flex-1 group-hover:text-red-600"
-                      // onDoubleClick={() => handleTitleDoubleClick(project.id, project.title)}
                     >
                       {project.title}
                     </CardTitle>
                   )}
-                  <Badge className={`${getStatusColor(project.status)} border-0 ml-2`}>
-                    {project.status}
-                  </Badge>
+                  <Dialog open={statusDialogOpen === project.id} onOpenChange={open => setStatusDialogOpen(open ? project.id : null)}>
+                    <DialogTrigger asChild>
+                      <Badge
+                        className={
+                          (project.status === '已完成'
+                            ? 'bg-green-100 text-green-800'
+                            : project.status === '进行中'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-yellow-100 text-yellow-800') + ' cursor-pointer'
+                        }
+                      >
+                        {project.status}
+                      </Badge>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>更改项目状态</DialogTitle>
+                      </DialogHeader>
+                      <div className="flex flex-col gap-2 mt-4">
+                        <button
+                          className="py-2 rounded bg-yellow-100 text-yellow-800 font-medium hover:bg-yellow-200"
+                          onClick={() => handleStatusChange(project.id, '草稿')}
+                        >草稿</button>
+                        <button
+                          className="py-2 rounded bg-blue-100 text-blue-800 font-medium hover:bg-blue-200"
+                          onClick={() => handleStatusChange(project.id, '进行中')}
+                        >进行中</button>
+                        <button
+                          className="py-2 rounded bg-green-100 text-green-800 font-medium hover:bg-green-200"
+                          onClick={() => handleStatusChange(project.id, '已完成')}
+                        >已完成</button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
@@ -203,13 +330,101 @@ const MyProjects = () => {
                   {project.description}
                 </p>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center justify-between w-full group-hover:hidden">
-                    <span className="text-xs text-gray-500">
+                  <div className="flex items-center justify-between w-full ">
+                    <span className="text-xs text-gray-500 group-hover:hidden">
                       最后修改: {project.updated_at ? project.updated_at.slice(0, 10) : ""}
                     </span>
-                    <Badge variant="outline" className="text-gray-600 border-gray-300">
-                      {project.category}
-                    </Badge>
+                    <span className="flex gap-1 ml-2 items-center">
+                      {(project.tags || '').split(',').filter(Boolean).map((tag: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className={
+                            'px-2 py-0.5 rounded text-xs font-medium cursor-pointer ' +
+                            (tag === '未分类'
+                              ? 'bg-gray-100 text-gray-500'
+                              : 'bg-red-100 text-red-800')
+                          }
+                          onClick={() => openTagDialog(project)}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      <Dialog open={tagDialogOpen === project.id} onOpenChange={open => setTagDialogOpen(open ? project.id : null)}>
+                        <DialogContent className="max-w-xl min-w-[480px]">
+                          <DialogHeader>
+                            <DialogTitle>管理项目标签</DialogTitle>
+                          </DialogHeader>
+                          <input
+                            className="w-full border rounded px-3 py-2 mb-4 text-sm"
+                            placeholder="搜索标签..."
+                            value={tagSearch}
+                            onChange={e => setTagSearch(e.target.value)}
+                          />
+                          <div className="mb-4 flex flex-wrap gap-3">
+                            {selectedTags.map(tag => (
+                              <span
+                                key={tag}
+                                className="relative bg-red-100 text-red-800 px-3 py-1 rounded text-sm font-medium cursor-pointer flex items-center"
+                                onClick={() => handleSelectTag(tag)}
+                                style={{ minWidth: 60 }}
+                              >
+                                {tag}
+                                <span
+                                  className="absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-gray-400 hover:text-red-500 text-base cursor-pointer bg-white rounded-full shadow"
+                                  onClick={e => { e.stopPropagation(); handleSelectTag(tag); }}
+                                  title="移除标签"
+                                >
+                                  ×
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-3 max-h-40 overflow-y-auto mb-4">
+                            {allTags.filter(tag => tag.includes(tagSearch)).map(tag => (
+                              <span
+                                key={tag}
+                                className={
+                                  'relative px-3 py-1 rounded text-sm font-medium cursor-pointer flex items-center ' +
+                                  (selectedTags.includes(tag)
+                                    ? 'bg-red-100 text-red-800'
+                                    : tag === '未分类'
+                                    ? 'bg-gray-100 text-gray-500'
+                                    : 'bg-gray-50 text-gray-700 hover:bg-red-50')
+                                }
+                                onClick={() => handleSelectTag(tag)}
+                                style={{ minWidth: 60 }}
+                              >
+                                {tag}
+                                <span
+                                  className="absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-gray-400 hover:text-red-500 text-base cursor-pointer bg-white rounded-full shadow"
+                                  onClick={e => { e.stopPropagation(); handleDeleteTag(tag); }}
+                                  title="删除标签"
+                                >
+                                  ×
+                                </span>
+                              </span>
+                            ))}
+                            {allTags.filter(tag => tag.includes(tagSearch)).length === 0 && <span className="text-xs text-gray-400">暂无标签</span>}
+                          </div>
+                          <div className="flex gap-2 mb-6">
+                            <input
+                              className="flex-1 border rounded px-2 py-2 text-sm"
+                              placeholder="新建标签"
+                              value={newTag}
+                              onChange={e => setNewTag(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && handleCreateTag()}
+                            />
+                            <button className="bg-red-500 text-white px-4 py-2 rounded text-sm flex items-center gap-1" onClick={handleCreateTag}>
+                              <Plus size={16} /> 新建
+                            </button>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <button className="px-5 py-2 rounded border text-base" onClick={() => setTagDialogOpen(null)}>取消</button>
+                            <button className="px-5 py-2 rounded bg-red-500 text-white text-base" onClick={handleSaveTags}>保存</button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </span>
                   </div>
                   <div className="hidden group-hover:flex items-center justify-end w-full space-x-1">
                     <Link href={`/editor/${project.id}`}>

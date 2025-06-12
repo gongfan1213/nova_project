@@ -46,7 +46,7 @@ const ProjectManageDialog = ({ projects, onProjectsChanged }: ProjectManageDialo
   const handleDelete = async () => {
     if (selectedProjects.length > 0) {
       setLoading(true);
-      await supabase.from("projects").delete().in("id", selectedProjects);
+      await supabase.from("threads").delete().in("id", selectedProjects);
       setLoading(false);
       setSelectedProjects([]);
       setOpen(false);
@@ -92,7 +92,7 @@ const ProjectManageDialog = ({ projects, onProjectsChanged }: ProjectManageDialo
                   onCheckedChange={() => handleSelectProject(project.id)}
                 />
                 <div className="flex-1">
-                  <h4 className="font-medium text-sm">{project.title}</h4>
+                  <h3 className="font-medium text-lg">{project.title}</h3>
                   <p className="text-xs text-gray-500 line-clamp-1">{project.description}</p>
                 </div>
                 <span className="text-xs text-gray-400">{project.lastModified}</span>
