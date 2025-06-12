@@ -270,7 +270,7 @@ export function TextRendererComponent(props: TextRendererProps) {
           <ViewRawText isRawView={isRawView} setIsRawView={setIsRawView} />
           <div className="relative">
             <TooltipIconButton
-              tooltip="小红书文章"
+              tooltip="我的草稿"
               variant="outline"
               delayDuration={400}
               onClick={() => setOpenXhs((v) => !v)}

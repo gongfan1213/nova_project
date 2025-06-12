@@ -33,7 +33,7 @@ export function XiaohongshuPopover({ open, onClose }: { open: boolean, onClose: 
       style={{ top: 48 }}
     >
       <div className="flex justify-between items-center mb-2">
-        <span className="font-semibold text-gray-800">小红书文章</span>
+        <span className="font-semibold text-gray-800">我的草稿</span>
         <button
           className="text-gray-400 hover:text-gray-600"
           onClick={onClose}
