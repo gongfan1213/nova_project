@@ -74,7 +74,7 @@ export const Composer: FC<ComposerProps> = (props: ComposerProps) => {
 
   return (
     <DragAndDropWrapper>
-      <ComposerPrimitive.Root className="focus-within:border-aui-ring/20 flex flex-col w-full min-h-[64px] flex-wrap items-center justify-center border px-2.5 shadow-sm transition-colors ease-in bg-white rounded-2xl">
+      <ComposerPrimitive.Root className="focus-within:border-gray-400 hover:border-gray-400 border border-gray-300 flex flex-col w-full min-h-[64px] flex-wrap items-center justify-center px-2.5 shadow-sm transition-all duration-300 bg-white rounded-2xl hover:shadow-lg focus-within:shadow-lg">
         <div className="flex flex-wrap gap-2 items-start mr-auto">
           <ComposerAttachments />
         </div>
