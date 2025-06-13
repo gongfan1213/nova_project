@@ -318,7 +318,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           ? params.messages[params.messages.length - 1]?.content || ""
           : "";
 
-      const generateResponse = await fetch("/api/dify/generate-artifact", {
+      const generateResponse = await fetch("/api/agent/artifact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -349,6 +349,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
             if (line.trim() && line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
+                console.log('hans-web-streamFirstTimeGeneration', data);
                 if (data.event === "message") {
                   // 提取 conversation_id
                   if (data.conversation_id && !receivedConversationId) {
@@ -448,7 +449,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           ? params.messages[params.messages.length - 1]?.content || ""
           : "";
 
-      const generateResponse = await fetch("/api/dify/generate-artifact", {
+      const generateResponse = await fetch("/api/agent/artifact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -458,6 +459,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           conversation_id: activeConversationId,
         }),
       });
+
 
       if (!generateResponse.ok) {
         throw new Error("Failed to rewrite artifact");
@@ -479,6 +481,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
             if (line.trim() && line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
+                console.log('hans-web-streamRewriteArtifact-data', data);
                 if (data.event === "message" && data.answer) {
                   artifactContent += data.answer;
                   // index 从1 开始
@@ -552,7 +555,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           : "";
 
       const generateResponse = await fetch(
-        "/api/dify/update-highlighted-text",
+        "/api/agent/update-highlighted-text",
         {
           method: "POST",
           headers: {
@@ -958,7 +961,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     chatHistory: string,
     finalMessages?: BaseMessage[]
   ) => {
-    const followupResponse = await fetch("/api/dify/generate-followup", {
+    const followupResponse = await fetch("/api/agent/generate-followup", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
