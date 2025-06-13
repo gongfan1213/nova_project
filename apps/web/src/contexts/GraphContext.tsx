@@ -292,7 +292,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 初始化返回数据
     // 从当前状态获取初始消息，确保包含用户输入
     let finalMessages: BaseMessage[] = [...messages];
-    let followupContent = ""
+    let followupContentRef = { current: "" }
     let finalFunctionTools: any[] = []
     const followupMessageId = `followup-${uuidv4()}`
 
@@ -347,6 +347,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       const reader = generateResponse.body?.getReader();
       const decoder = new TextDecoder();
       let artifactContent = "";
+      followupContentRef.current = "";
       let receivedConversationId = "";
 
       if (reader) {
@@ -377,7 +378,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                     data.thought
                   );
                   setAgentMessage(
-                    followupContent,
+                    followupContentRef,
                     followupMessageId,
                     finalMessages,
                     finalFunctionTools,
@@ -466,7 +467,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
-    let followupContent = ""
+    let followupContentRef = { current: "" }
     let finalMessages: BaseMessage[] = []
     let finalFunctionTools: any[] = []
     const followupMessageId = `followup-${uuidv4()}`
@@ -543,7 +544,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                     data.thought
                   );
                   setAgentMessage(
-                    followupContent,
+                    followupContentRef,
                     followupMessageId,
                     finalMessages,
                     finalFunctionTools,
@@ -1017,13 +1018,15 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   };
 
   const setAgentMessage = (
-    followupContent: string,
+    followupContentRef: { current: string },
     followupMessageId: any,
     finalMessages: any,
     finalFunctionTools: any,
     data: any
   ) => {
-    followupContent += data.thought;
+    if(data.answer){
+      followupContentRef.current += data.answer;
+    }
 
     //   export type ToolCall = {
     //     name: string;
@@ -1041,7 +1044,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 创建 followup 消息
     const followupMessage = new AIMessage({
       id: followupMessageId,
-      content: followupContent,
+      content: followupContentRef.current,
       tool_calls: finalFunctionTools,
       additional_kwargs: {
         tool_calls: finalFunctionTools,
@@ -1074,7 +1077,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         finalMessages[existingIndex] = followupMessage;
         console.log("Updated existing followup message in finalMessages", {
           index: existingIndex,
-          contentLength: followupContent.length,
+          contentLength: followupContentRef.current.length,
           totalMessages: finalMessages.length,
         });
       } else {
@@ -1082,7 +1085,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         finalMessages.push(followupMessage);
         console.log("Added new followup message to finalMessages", {
           messageId: followupMessageId,
-          contentLength: followupContent.length,
+          contentLength: followupContentRef.current.length,
           totalMessages: finalMessages.length,
         });
       }

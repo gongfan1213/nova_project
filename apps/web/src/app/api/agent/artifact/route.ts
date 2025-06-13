@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     // 准备请求头
     let headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer app-OO49SYLKS9blEdwzxCLc7RvU',
+      'Authorization': 'Bearer app-V8DD4qtQzqpVZpvtX9ba4CgI',
       'User-Agent': 'Nova-Agent/1.0',
     }
     if (NEXT_PUBLIC_USE_BLUE_API_DIFY) {
