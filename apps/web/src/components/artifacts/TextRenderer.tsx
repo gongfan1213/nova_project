@@ -254,20 +254,20 @@ export function TextRendererComponent(props: TextRendererProps) {
     });
   };
 
-  if (props.cardContent) {
-    return (
-      <div className="p-8">
-        <button
-          className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          onClick={props.onBackToEditor}
-        >
-          返回编辑器
-        </button>
-        <h2 className="text-2xl font-bold mb-2">{props.cardContent.title}</h2>
-        <div className="whitespace-pre-wrap text-base text-gray-800">{props.cardContent.content}</div>
-      </div>
-    )
-  }
+  // if (props.cardContent) {
+  //   return (
+  //     <div className="p-8">
+  //       <button
+  //         className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+  //         onClick={props.onBackToEditor}
+  //       >
+  //         返回编辑器
+  //       </button>
+  //       <h2 className="text-2xl font-bold mb-2">{props.cardContent.title}</h2>
+  //       <div className="whitespace-pre-wrap text-base text-gray-800">{props.cardContent.content}</div>
+  //     </div>
+  //   )
+  // }
 
   return (
     <div className="w-full h-full mt-2 flex flex-col border-t-[1px] border-gray-200 overflow-y-auto py-5 relative">

@@ -11,6 +11,7 @@ import { createSupabaseClient } from "@/lib/supabase/client";
 import { TextRenderer } from "../TextRenderer";
 import { Card, CardContent } from "@/components/ui/card";
 import { X } from 'lucide-react';
+import { useGraphContext } from '@/contexts/GraphContext';
 
 interface ArtifactHeaderProps {
   isBackwardsDisabled: boolean;
@@ -32,7 +33,10 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
   const [loadingCards, setLoadingCards] = useState(false);
   const [selectedCard, setSelectedCard] = useState<null | { id: string; title: string; content: string }>(null);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const [showCardContent, setShowCardContent] = useState<null | { id: string; title: string; content: string }>(null);
   const supabase = createSupabaseClient();
+  const { graphData } = useGraphContext();
+  const { setArtifact } = graphData;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -81,12 +85,33 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
 
   // 点击缩略卡片按钮
   const handleShowAllCards = () => {
-    setViewMode('all-cards');
-    fetchAllCards();
-  };
+    setViewMode(prev => {
+      if (prev === 'all-cards') {
+        return 'editor'
+      } else {
+        fetchAllCards()
+        return 'all-cards'
+      }
+    })
+  }
 
   // 渲染主内容区
   let mainContent = null;
+  // 获取当前artifact内容
+  const { artifact } = graphData;
+  let currentCardContent = null;
+  if (artifact && artifact.contents && artifact.currentIndex) {
+    currentCardContent = artifact.contents.find(
+      (c: any) => c.index === artifact.currentIndex
+    );
+    if (currentCardContent) {
+      currentCardContent = {
+        id: currentCardContent.id || '',
+        title: currentCardContent.title,
+        content: currentCardContent.fullMarkdown || currentCardContent.code || '',
+      };
+    }
+  }
   if (viewMode === 'editor') {
     mainContent = (
       <TextRenderer
@@ -94,22 +119,14 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
         isHovering={false}
         isInputVisible={true}
         projectId={threadId || ''}
-        cardContent={null}
+        cardContent={currentCardContent}
         onBackToEditor={() => {}}
       />
     );
   } else if (viewMode === 'all-cards') {
     mainContent = (
       <div className="p-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">所有卡片</h2>
-          <button
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-            onClick={() => setViewMode('editor')}
-          >
-            返回编辑区
-          </button>
-        </div>
+        {/* 只显示卡片列表 */}
         <div style={{ maxHeight: '700px', overflowY: 'auto' }}>
           <div className="mt-6 grid grid-cols-3 gap-4">
             {loadingCards ? (
@@ -117,13 +134,12 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
             ) : allCards.length === 0 ? (
               <div className="col-span-3 text-center">暂无卡片</div>
             ) : (
-              allCards.map((markdown) => (
+              allCards.map((markdown, idx) => (
                 <Card
                   key={markdown.id}
                   className="hover:shadow-lg transition-shadow cursor-pointer relative group"
                   onClick={() => {
-                    setSelectedCard(markdown)
-                    setViewMode('card-detail')
+                    setShowCardContent(markdown)
                   }}
                   onMouseEnter={() => setHoveredCardId(markdown.id)}
                   onMouseLeave={() => setHoveredCardId(null)}
@@ -133,8 +149,8 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
                     <button
                       className="absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow hover:bg-gray-100"
                       onClick={e => {
-                        e.stopPropagation();
-                        handleDeleteCard(markdown.id);
+                        e.stopPropagation()
+                        handleDeleteCard(markdown.id)
                       }}
                     >
                       <X className="w-4 h-4 text-gray-500" />
@@ -151,19 +167,21 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
             )}
           </div>
         </div>
-      </div>
-    );
-  } else if (viewMode === 'card-detail' && selectedCard) {
-    mainContent = (
-      <div className="p-8">
-        <button
-          className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          onClick={() => setViewMode('all-cards')}
-        >
-          返回所有卡片
-        </button>
-        <h2 className="text-2xl font-bold mb-2">{selectedCard.title}</h2>
-        <div className="whitespace-pre-wrap text-base text-gray-800">{selectedCard.content}</div>
+        {/* 卡片内容区域 */}
+        {showCardContent && (
+          <div className="mt-8 p-6 bg-white rounded shadow">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">{showCardContent.title}</h2>
+              <button
+                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                onClick={() => setShowCardContent(null)}
+              >
+                关闭
+              </button>
+            </div>
+            <div className="whitespace-pre-wrap text-base text-gray-800">{showCardContent.content}</div>
+          </div>
+        )}
       </div>
     );
   }
