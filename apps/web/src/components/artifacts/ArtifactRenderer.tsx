@@ -29,6 +29,8 @@ export interface ArtifactRendererProps {
   chatCollapsed: boolean;
   setChatCollapsed: (c: boolean) => void;
   projectId: string;
+  showAllCardsDialog: boolean;
+  setShowAllCardsDialog: (v: boolean) => void;
 }
 
 interface SelectionBox {
@@ -78,7 +80,6 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
   const [inputValue, setInputValue] = useState("");
   const [isHoveringOverArtifact, setIsHoveringOverArtifact] = useState(false);
   const [isValidSelectionOrigin, setIsValidSelectionOrigin] = useState(false);
-  const [showAllCardsDialog, setShowAllCardsDialog] = useState(false)
   const [allMarkdowns, setAllMarkdowns] = useState<{ title: string, content: string }[]>([])
 
   const handleMouseUp = useCallback(() => {
@@ -322,15 +323,15 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
   // 日志：确认点击右上角缩略卡片按钮
   const handleShowAllCards = () => {
     console.log('点击缩略卡片按钮');
-    setShowAllCardsDialog(true);
+    props.setShowAllCardsDialog(true);
   };
 
   // 拉取所有artifact_contents
   useEffect(() => {
-    console.log('showAllCardsDialog状态:', showAllCardsDialog);
+    console.log('showAllCardsDialog状态:', props.showAllCardsDialog);
     console.log('当前props.projectId:', props.projectId);
     
-    if (!showAllCardsDialog) {
+    if (!props.showAllCardsDialog) {
       console.log('showAllCardsDialog为false，不执行获取数据');
       return;
     }
@@ -380,7 +381,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
       }
     };
     fetchAllMarkdowns();
-  }, [showAllCardsDialog, props.projectId]);
+  }, [props.showAllCardsDialog, props.projectId]);
 
   if (!artifact && isStreaming) {
     return <ArtifactLoading />;
@@ -415,9 +416,9 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
         onShowAllCards={handleShowAllCards}
       />
       {/* 卡片弹窗 */}
-      <Dialog open={showAllCardsDialog} onOpenChange={(open) => {
+      <Dialog open={props.showAllCardsDialog} onOpenChange={(open) => {
         console.log('Dialog弹窗onOpenChange:', open);
-        setShowAllCardsDialog(open);
+        props.setShowAllCardsDialog(open);
       }}>
         <DialogContent className="max-w-4xl">
           <DialogTitle>全部卡片</DialogTitle>

@@ -56,6 +56,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
   const [projectCollapsed, setProjectCollapsed] = useState(false);
   const [showMarkdownDialog, setShowMarkdownDialog] = useState(false)
   const [allMarkdowns, setAllMarkdowns] = useState<{ title: string, content: string }[]>([])
+  const [showAllCardsDialog, setShowAllCardsDialog] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -363,6 +364,8 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
                     setIsEditing={setIsEditing}
                     isEditing={isEditing}
                     projectId={effectiveProjectId}
+                    showAllCardsDialog={showAllCardsDialog}
+                    setShowAllCardsDialog={setShowAllCardsDialog}
                   />
                 )}
               </div>
