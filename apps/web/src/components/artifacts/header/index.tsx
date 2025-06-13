@@ -8,6 +8,9 @@ import { TooltipIconButton } from "@/components/ui/assistant-ui/tooltip-icon-but
 import { AllCardsDialog } from "./all-cards-dialog";
 import { useState, useEffect } from "react";
 import { createSupabaseClient } from "@/lib/supabase/client";
+import { TextRenderer } from "../TextRenderer";
+import { Card, CardContent } from "@/components/ui/card";
+import { X } from 'lucide-react';
 
 interface ArtifactHeaderProps {
   isBackwardsDisabled: boolean;
@@ -23,8 +26,13 @@ interface ArtifactHeaderProps {
 }
 
 export function ArtifactHeader(props: ArtifactHeaderProps) {
-  const [showAllCardsDialog, setShowAllCardsDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<'editor' | 'all-cards' | 'card-detail'>('editor');
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [allCards, setAllCards] = useState<{ id: string; title: string; content: string }[]>([]);
+  const [loadingCards, setLoadingCards] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<null | { id: string; title: string; content: string }>(null);
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const supabase = createSupabaseClient();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -33,79 +41,178 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
     }
   }, []);
 
-  // 页面加载自动打印所有 full_markdown
-  useEffect(() => {
-    const fetchAndLogMarkdowns = async () => {
-      if (!threadId) return;
-      const supabase = createSupabaseClient();
+  // 拉取所有卡片
+  const fetchAllCards = async () => {
+    if (!threadId) return;
+    setLoadingCards(true);
+    try {
       const { data: artifacts } = await supabase
         .from('artifacts')
         .select('id')
         .eq('thread_id', threadId);
-      if (!artifacts || artifacts.length === 0) return;
+      if (!artifacts || artifacts.length === 0) {
+        setAllCards([]);
+        return;
+      }
       const { data: contents } = await supabase
         .from('artifact_contents')
-        .select('full_markdown')
+        .select('id, title, full_markdown')
         .in('artifact_id', artifacts.map(a => a.id))
         .eq('type', 'text');
       if (contents) {
-        contents.forEach((c, i) => {
-          console.log(`full_markdown[${i}]:`, c.full_markdown);
-        });
+        setAllCards(contents.map(c => ({
+          id: c.id,
+          title: c.title,
+          content: c.full_markdown || ''
+        })));
+      } else {
+        setAllCards([]);
       }
-    };
-    if (threadId) {
-      fetchAndLogMarkdowns();
+    } finally {
+      setLoadingCards(false);
     }
-  }, [threadId]);
+  };
+
+  // 删除卡片
+  const handleDeleteCard = async (id: string) => {
+    await supabase.from('artifact_contents').delete().eq('id', id);
+    fetchAllCards();
+  };
+
+  // 点击缩略卡片按钮
+  const handleShowAllCards = () => {
+    setViewMode('all-cards');
+    fetchAllCards();
+  };
+
+  // 渲染主内容区
+  let mainContent = null;
+  if (viewMode === 'editor') {
+    mainContent = (
+      <TextRenderer
+        isEditing={false}
+        isHovering={false}
+        isInputVisible={true}
+        projectId={threadId || ''}
+        cardContent={null}
+        onBackToEditor={() => {}}
+      />
+    );
+  } else if (viewMode === 'all-cards') {
+    mainContent = (
+      <div className="p-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">所有卡片</h2>
+          <button
+            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            onClick={() => setViewMode('editor')}
+          >
+            返回编辑区
+          </button>
+        </div>
+        <div style={{ maxHeight: '700px', overflowY: 'auto' }}>
+          <div className="mt-6 grid grid-cols-3 gap-4">
+            {loadingCards ? (
+              <div className="col-span-3 text-center">加载中...</div>
+            ) : allCards.length === 0 ? (
+              <div className="col-span-3 text-center">暂无卡片</div>
+            ) : (
+              allCards.map((markdown) => (
+                <Card
+                  key={markdown.id}
+                  className="hover:shadow-lg transition-shadow cursor-pointer relative group"
+                  onClick={() => {
+                    setSelectedCard(markdown)
+                    setViewMode('card-detail')
+                  }}
+                  onMouseEnter={() => setHoveredCardId(markdown.id)}
+                  onMouseLeave={() => setHoveredCardId(null)}
+                >
+                  {/* 删除按钮，仅在悬浮时显示 */}
+                  {hoveredCardId === markdown.id && (
+                    <button
+                      className="absolute top-2 right-2 z-10 bg-white rounded-full p-1 shadow hover:bg-gray-100"
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDeleteCard(markdown.id);
+                      }}
+                    >
+                      <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                  )}
+                  <CardContent className="p-4">
+                    <h3 className="font-medium text-lg mb-2">{markdown.title}</h3>
+                    <p className="text-gray-600 line-clamp-3">
+                      {markdown.content}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  } else if (viewMode === 'card-detail' && selectedCard) {
+    mainContent = (
+      <div className="p-8">
+        <button
+          className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+          onClick={() => setViewMode('all-cards')}
+        >
+          返回所有卡片
+        </button>
+        <h2 className="text-2xl font-bold mb-2">{selectedCard.title}</h2>
+        <div className="whitespace-pre-wrap text-base text-gray-800">{selectedCard.content}</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-row items-center justify-between">
-      <div className="flex flex-row items-center justify-center gap-2">
-        {props.chatCollapsed && (
+    <div className="flex flex-col w-full">
+      <div className="flex flex-row items-center justify-between">
+        <div className="flex flex-row items-center justify-center gap-2">
+          {props.chatCollapsed && (
+            <TooltipIconButton
+              tooltip="Expand Chat"
+              variant="ghost"
+              className="ml-2 mb-1 w-8 h-8"
+              delayDuration={400}
+              onClick={() => props.setChatCollapsed(false)}
+            >
+              <PanelRightClose className="text-gray-600" />
+            </TooltipIconButton>
+          )}
+          <ArtifactTitle
+            title={props.currentArtifactContent.title}
+            isArtifactSaved={props.isArtifactSaved}
+            artifactUpdateFailed={props.artifactUpdateFailed}
+          />
+        </div>
+        <div className="flex gap-2 items-end mt-[10px] mr-[6px]">
           <TooltipIconButton
-            tooltip="Expand Chat"
+            tooltip="缩略卡片"
             variant="ghost"
-            className="ml-2 mb-1 w-8 h-8"
+            className="w-8 h-8 mr-1"
             delayDuration={400}
-            onClick={() => props.setChatCollapsed(false)}
+            onClick={handleShowAllCards}
           >
-            <PanelRightClose className="text-gray-600" />
+            <BookOpen className="w-10 h-10 text-gray-600" />
           </TooltipIconButton>
-        )}
-        <ArtifactTitle
-          title={props.currentArtifactContent.title}
-          isArtifactSaved={props.isArtifactSaved}
-          artifactUpdateFailed={props.artifactUpdateFailed}
-        />
+          <NavigateArtifactHistory
+            isBackwardsDisabled={props.isBackwardsDisabled}
+            isForwardDisabled={props.isForwardDisabled}
+            setSelectedArtifact={props.setSelectedArtifact}
+            currentArtifactIndex={props.currentArtifactContent.index}
+            totalArtifactVersions={props.totalArtifactVersions}
+          />
+          <ReflectionsDialog selectedAssistant={props.selectedAssistant} />
+        </div>
       </div>
-      <div className="flex gap-2 items-end mt-[10px] mr-[6px]">
-        <TooltipIconButton
-          tooltip="缩略卡片"           
-          variant="ghost"
-          className="w-8 h-8 mr-1"
-          delayDuration={400}
-          onClick={() => setShowAllCardsDialog(true)}
-        >
-          <BookOpen className="w-10 h-10 text-gray-600" />
-        </TooltipIconButton>
-        <NavigateArtifactHistory
-          isBackwardsDisabled={props.isBackwardsDisabled}
-          isForwardDisabled={props.isForwardDisabled}
-          setSelectedArtifact={props.setSelectedArtifact}
-          currentArtifactIndex={props.currentArtifactContent.index}
-          totalArtifactVersions={props.totalArtifactVersions}
-        />
-        <ReflectionsDialog selectedAssistant={props.selectedAssistant} />
+      {/* 主内容区切换显示 */}
+      <div className="w-full">
+        {mainContent}
       </div>
-
-      {threadId && (
-        <AllCardsDialog
-          open={showAllCardsDialog}
-          onOpenChange={setShowAllCardsDialog}
-          threadId={threadId}
-        />
-      )}
     </div>
   );
 }
