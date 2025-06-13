@@ -449,7 +449,7 @@ export const UserBgBox = () => {
     </div> */}
 
       {/* 横向卡片布局 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {cardConfigs.map((card) => {
           const itemCount = getItemCount(card.type);
           const isActive = activeCard === card.type;
@@ -459,7 +459,7 @@ export const UserBgBox = () => {
             <div
               key={card.type}
               className={`flex flex-col
-              rounded-lg border-2 cursor-pointer transition-all duration-200
+              rounded-[20px] border-2 cursor-pointer transition-all duration-200
               ${card.color}
               ${isActive ? "ring-2 ring-blue-500 ring-opacity-50" : ""}
             `}

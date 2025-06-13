@@ -36,7 +36,7 @@ export const ChineseFeatureCards: React.FC<{ onCardClick?: (title: string) => vo
     {cards.map((card, idx) => (
       <div
         key={idx}
-        className="bg-white rounded-xl shadow-md p-6 cursor-pointer hover:shadow-lg transition"
+        className="bg-white rounded-[20px] shadow-md p-6 cursor-pointer hover:shadow-lg transition"
         onClick={() => onCardClick?.(card.title)}
       >
         <div className="flex items-center mb-4">
