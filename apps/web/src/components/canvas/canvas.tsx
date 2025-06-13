@@ -1,4 +1,5 @@
 "use client";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import { ArtifactRenderer } from "@/components/artifacts/ArtifactRenderer";
 import { WebSearchResults } from "@/components/web-search-results";
@@ -68,34 +69,41 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
         try {
           const { data: thread, error } = await supabase
             .from("threads")
-            .select(`
+            .select(
+              `
+          id,
+          title,
+          artifacts (
+            id,
+            artifact_contents (
               id,
-              title,
-              artifacts (
-                id,
-                artifact_contents (
-                  id,
-                  full_markdown,
-                  code,
-                  index
-                )
-              )
-            `)
+              full_markdown,
+              code,
+              index
+            )
+          )
+        `
+            )
             .eq("id", projectId)
             .single();
 
           if (error) throw error;
 
           // 日志：打印项目内容
-          console.log('加载到的项目内容:', thread);
+          console.log("加载到的项目内容:", thread);
 
           const artifact = thread.artifacts?.[0];
           let content = null;
-          if (artifact?.artifact_contents && artifact.artifact_contents.length > 0) {
+          if (
+            artifact?.artifact_contents &&
+            artifact.artifact_contents.length > 0
+          ) {
             // 按 index 降序排序，取 index 最大的那条
-            content = [...artifact.artifact_contents].sort((a, b) => b.index - a.index)[0];
+            content = [...artifact.artifact_contents].sort(
+              (a, b) => b.index - a.index
+            )[0];
           }
-          const fullMarkdown = content?.full_markdown || content?.code || '';
+          const fullMarkdown = content?.full_markdown || content?.code || "";
 
           const artifactContent: ArtifactMarkdownV3 = {
             index: 1,
@@ -170,10 +178,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
   };
 
   return (
-    <ResizablePanelGroup
-      direction="horizontal"
-      className="h-screen flex !flex-row-reverse"
-    >
+    <PanelGroup direction="horizontal">
       {!chatStarted && (
         <NoSSRWrapper>
           <ContentComposerChatInterface
@@ -216,71 +221,32 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
           />
         </NoSSRWrapper>
       )}
-      {!chatCollapsed && chatStarted && (
-        <ResizablePanel
-          defaultSize={40}
-          minSize={15}
-          maxSize={50}
-          className="transition-all duration-700 h-[calc(100vh-64px)] mr-auto bg-gray-50/70 shadow-inner-right"
-          id="chat-panel-main"
-          order={1}
-        >
-          <NoSSRWrapper>
-            <ContentComposerChatInterface
-              chatCollapsed={chatCollapsed}
-              setChatCollapsed={(c) => {
-                setChatCollapsed(c);
-                const queryParams = new URLSearchParams(
-                  searchParams.toString()
-                );
-                queryParams.set(CHAT_COLLAPSED_QUERY_PARAM, JSON.stringify(c));
-                router.replace(`?${queryParams.toString()}`, { scroll: false });
-              }}
-              switchSelectedThreadCallback={(thread) => {
-                // Chat should only be "started" if there are messages present
-                if ((thread.values as Record<string, any>)?.messages?.length) {
-                  setChatStarted(true);
-                  if (thread?.metadata?.customModelName) {
-                    setModelName(
-                      thread.metadata.customModelName as ALL_MODEL_NAMES
-                    );
-                  } else {
-                    setModelName(DEFAULT_MODEL_NAME);
-                  }
 
-                  if (thread?.metadata?.modelConfig) {
-                    setModelConfig(
-                      (thread?.metadata.customModelName ??
-                        DEFAULT_MODEL_NAME) as ALL_MODEL_NAMES,
-                      (thread.metadata.modelConfig ??
-                        DEFAULT_MODEL_CONFIG) as CustomModelConfig
-                    );
-                  } else {
-                    setModelConfig(DEFAULT_MODEL_NAME, DEFAULT_MODEL_CONFIG);
-                  }
-                } else {
-                  setChatStarted(false);
-                }
-              }}
-              setChatStarted={setChatStarted}
-              hasChatStarted={chatStarted}
-              handleQuickStart={handleQuickStart}
-            />
-          </NoSSRWrapper>
-        </ResizablePanel>
+      {!projectCollapsed && (
+        <>
+          <Panel
+            className="h-[calc(100vh-64px)]"
+            defaultSize={10}
+            minSize={10}
+            maxSize={40}
+          >
+            <div className="flex flex-col w-full">
+              <div className="">
+                <ProjectHistoryComponent
+                  switchSelectedThreadCallback={() => {
+                    //
+                  }}
+                />
+              </div>
+            </div>
+          </Panel>
+        </>
       )}
+      <PanelResizeHandle className="z-10 flex h-[calc(100vh-64px)] w-[3px] items-center justify-center rounded-sm border bg-border" />
 
       {chatStarted && (
         <>
-          <ResizableHandle />
-          <ResizablePanel
-            defaultSize={chatCollapsed ? 100 : 100}
-            maxSize={85}
-            minSize={10}
-            id="canvas-panel"
-            order={2}
-            className="flex flex-row w-full"
-          >
+          <Panel className="h-[calc(100vh-64px)]" defaultSize={45} minSize={20}>
             <div className="w-full ml-auto">
               <ArtifactRenderer
                 chatCollapsed={chatCollapsed}
@@ -306,34 +272,75 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
               open={webSearchResultsOpen}
               setOpen={setWebSearchResultsOpen}
             />
-          </ResizablePanel>
+          </Panel>
+
+          <PanelResizeHandle className="z-10 flex h-[calc(100vh-64px)] w-[3px] items-center justify-center rounded-sm border bg-border" />
+
           {/*  */}
-          {!projectCollapsed && (
-            <>
-              <ResizableHandle />
-              <ResizablePanel
-                defaultSize={projectCollapsed ? 10 : 10}
-                maxSize={85}
-                minSize={10}
-                id="canvas-project-history"
-                order={2}
-                className="flex flex-row w-full"
-              >
-                <div className="flex flex-col w-full">
-                  <div className="">
-                    <ProjectHistoryComponent
-                      switchSelectedThreadCallback={() => {
-                        //
-                      }}
-                    />
-                  </div>
-                </div>
-              </ResizablePanel>
-            </>
+          {!chatCollapsed && chatStarted && (
+            <Panel
+              className=" h-[calc(100vh-64px)]"
+              defaultSize={45}
+              minSize={15}
+              maxSize={85}
+            >
+              <NoSSRWrapper>
+                <ContentComposerChatInterface
+                  chatCollapsed={chatCollapsed}
+                  setChatCollapsed={(c) => {
+                    setChatCollapsed(c);
+                    const queryParams = new URLSearchParams(
+                      searchParams.toString()
+                    );
+                    queryParams.set(
+                      CHAT_COLLAPSED_QUERY_PARAM,
+                      JSON.stringify(c)
+                    );
+                    router.replace(`?${queryParams.toString()}`, {
+                      scroll: false,
+                    });
+                  }}
+                  switchSelectedThreadCallback={(thread) => {
+                    // Chat should only be "started" if there are messages present
+                    if (
+                      (thread.values as Record<string, any>)?.messages?.length
+                    ) {
+                      setChatStarted(true);
+                      if (thread?.metadata?.customModelName) {
+                        setModelName(
+                          thread.metadata.customModelName as ALL_MODEL_NAMES
+                        );
+                      } else {
+                        setModelName(DEFAULT_MODEL_NAME);
+                      }
+
+                      if (thread?.metadata?.modelConfig) {
+                        setModelConfig(
+                          (thread?.metadata.customModelName ??
+                            DEFAULT_MODEL_NAME) as ALL_MODEL_NAMES,
+                          (thread.metadata.modelConfig ??
+                            DEFAULT_MODEL_CONFIG) as CustomModelConfig
+                        );
+                      } else {
+                        setModelConfig(
+                          DEFAULT_MODEL_NAME,
+                          DEFAULT_MODEL_CONFIG
+                        );
+                      }
+                    } else {
+                      setChatStarted(false);
+                    }
+                  }}
+                  setChatStarted={setChatStarted}
+                  hasChatStarted={chatStarted}
+                  handleQuickStart={handleQuickStart}
+                />
+              </NoSSRWrapper>
+            </Panel>
           )}
         </>
       )}
-    </ResizablePanelGroup>
+    </PanelGroup>
   );
 }
 
