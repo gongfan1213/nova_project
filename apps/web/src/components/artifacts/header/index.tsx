@@ -3,7 +3,7 @@ import { ArtifactTitle } from "./artifact-title";
 import { NavigateArtifactHistory } from "./navigate-artifact-history";
 import { ArtifactCodeV3, ArtifactMarkdownV3 } from "@opencanvas/shared/types";
 import { Assistant } from "@langchain/langgraph-sdk";
-import { PanelRightClose } from "lucide-react";
+import { PanelRightClose, BookOpen } from "lucide-react";
 import { TooltipIconButton } from "@/components/ui/assistant-ui/tooltip-icon-button";
 
 interface ArtifactHeaderProps {
@@ -17,6 +17,10 @@ interface ArtifactHeaderProps {
   artifactUpdateFailed: boolean;
   chatCollapsed: boolean;
   setChatCollapsed: (c: boolean) => void;
+  onShowAllCards?: () => void;
+  showAllCardsDialog?: boolean;
+  setShowAllCardsDialog?: (v: boolean) => void;
+  allMarkdowns?: { title: string, content: string }[];
 }
 
 export function ArtifactHeader(props: ArtifactHeaderProps) {
@@ -41,6 +45,20 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
         />
       </div>
       <div className="flex gap-2 items-end mt-[10px] mr-[6px]">
+        {props.onShowAllCards && (
+          <TooltipIconButton
+            tooltip="缩略卡片"
+            variant="ghost"
+            className="w-8 h-8 mr-1"
+            delayDuration={400}
+            onClick={() => {
+              console.log('BookOpen按钮被点击');
+              props.onShowAllCards();
+            }}
+          >
+            <BookOpen className="w-10 h-10 text-gray-600" />
+          </TooltipIconButton>
+        )}
         <NavigateArtifactHistory
           isBackwardsDisabled={props.isBackwardsDisabled}
           isForwardDisabled={props.isForwardDisabled}

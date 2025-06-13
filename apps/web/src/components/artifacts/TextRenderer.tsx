@@ -304,7 +304,7 @@ export function TextRendererComponent(props: TextRendererProps) {
           <CopyText currentArtifactContent={getArtifactContent(artifact)} />
           <ViewRawText isRawView={isRawView} setIsRawView={setIsRawView} />
           <div className="relative">
-            <TooltipIconButton
+            {/* <TooltipIconButton
               tooltip="我的草稿"
               variant="outline"
               delayDuration={400}
@@ -312,7 +312,7 @@ export function TextRendererComponent(props: TextRendererProps) {
             >
               <BookOpen className="w-5 h-5 text-gray-600" />
             </TooltipIconButton>
-            <XiaohongshuPopover open={openXhs} onClose={() => setOpenXhs(false)} projectId={props.projectId} />
+            <XiaohongshuPopover open={openXhs} onClose={() => setOpenXhs(false)} projectId={props.projectId} /> */}
           </div>
         </div>
       )}

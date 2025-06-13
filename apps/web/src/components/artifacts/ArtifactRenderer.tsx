@@ -21,19 +21,31 @@ import { useGraphContext } from "@/contexts/GraphContext";
 import { ArtifactHeader } from "./header";
 import { useUserContext } from "@/contexts/UserContext";
 import { useAssistantContext } from "@/contexts/AssistantContext";
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 
 export interface ArtifactRendererProps {
   isEditing: boolean;
   setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
   chatCollapsed: boolean;
   setChatCollapsed: (c: boolean) => void;
-  projectId?: string;
+  projectId: string;
 }
 
 interface SelectionBox {
   top: number;
   left: number;
   text: string;
+}
+
+function MarkdownCard({ title, content }: { title: string, content: string }) {
+  // 限制内容最多展示120字，超出用省略号
+  const displayContent = content.length > 120 ? content.slice(0, 120) + '...' : content;
+  return (
+    <div className="bg-white rounded-xl shadow p-4 w-[340px] h-[180px] flex flex-col justify-between">
+      <div className="font-bold text-base mb-2 line-clamp-1">{title}</div>
+      <div className="text-gray-600 mb-3 overflow-hidden break-all whitespace-pre-wrap" style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>{displayContent}</div>
+    </div>
+  )
 }
 
 function ArtifactRendererComponent(props: ArtifactRendererProps) {
@@ -66,6 +78,8 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
   const [inputValue, setInputValue] = useState("");
   const [isHoveringOverArtifact, setIsHoveringOverArtifact] = useState(false);
   const [isValidSelectionOrigin, setIsValidSelectionOrigin] = useState(false);
+  const [showAllCardsDialog, setShowAllCardsDialog] = useState(false)
+  const [allMarkdowns, setAllMarkdowns] = useState<{ title: string, content: string }[]>([])
 
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
@@ -305,6 +319,69 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
     ? getArtifactContent(artifact)
     : undefined;
 
+  // 日志：确认点击右上角缩略卡片按钮
+  const handleShowAllCards = () => {
+    console.log('点击缩略卡片按钮');
+    setShowAllCardsDialog(true);
+  };
+
+  // 拉取所有artifact_contents
+  useEffect(() => {
+    console.log('showAllCardsDialog状态:', showAllCardsDialog);
+    console.log('当前props.projectId:', props.projectId);
+    
+    if (!showAllCardsDialog) {
+      console.log('showAllCardsDialog为false，不执行获取数据');
+      return;
+    }
+    
+    const fetchAllMarkdowns = async () => {
+      if (!props.projectId) {
+        console.log('没有projectId，无法获取数据');
+        return;
+      }
+      try {
+        console.log('开始获取数据，projectId:', props.projectId);
+        const supabase = (await import('@/lib/supabase/client')).createSupabaseClient();
+        
+        // 查询artifacts表
+        const { data: artifacts, error: artifactsError } = await supabase
+          .from('artifacts')
+          .select('id, thread_id, artifact_contents(id, full_markdown, index, title, type)')
+          .eq('thread_id', props.projectId);
+          
+        if (artifactsError) {
+          console.error('获取artifacts数据失败:', artifactsError);
+          throw artifactsError;
+        }
+        
+        console.log('获取到的artifacts数据:', artifacts);
+        
+        let markdowns = [];
+        let allFullMarkdowns = [];
+        for (const artifact of artifacts || []) {
+          for (const ac of (artifact.artifact_contents || [])) {
+            if (ac.full_markdown) {
+              console.log('获取到的full_markdown:', ac.full_markdown);
+              markdowns.push({
+                title: ac.title || '无标题',
+                content: ac.full_markdown,
+              });
+              allFullMarkdowns.push(ac.full_markdown);
+            }
+          }
+        }
+        // 打印所有full_markdown内容
+        console.log('该thread下所有full_markdown内容:', allFullMarkdowns);
+        setAllMarkdowns(markdowns);
+      } catch (e) {
+        console.error('获取数据过程中发生错误:', e);
+        setAllMarkdowns([]);
+      }
+    };
+    fetchAllMarkdowns();
+  }, [showAllCardsDialog, props.projectId]);
+
   if (!artifact && isStreaming) {
     return <ArtifactLoading />;
   }
@@ -335,7 +412,28 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
         artifactUpdateFailed={artifactUpdateFailed}
         chatCollapsed={props.chatCollapsed}
         setChatCollapsed={props.setChatCollapsed}
+        onShowAllCards={handleShowAllCards}
       />
+      {/* 卡片弹窗 */}
+      <Dialog open={showAllCardsDialog} onOpenChange={(open) => {
+        console.log('Dialog弹窗onOpenChange:', open);
+        setShowAllCardsDialog(open);
+      }}>
+        <DialogContent className="max-w-4xl">
+          <DialogTitle>全部卡片</DialogTitle>
+          <div className="font-bold text-lg mb-4">全部卡片</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {allMarkdowns.length === 0 && <div className="col-span-3 text-gray-400">暂无内容</div>}
+            {allMarkdowns.map((item, idx) => (
+              <MarkdownCard
+                key={idx}
+                title={item.title}
+                content={item.content}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
       <div
         ref={contentRef}
         className={cn(
