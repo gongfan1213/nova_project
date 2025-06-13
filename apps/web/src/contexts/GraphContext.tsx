@@ -1024,9 +1024,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     finalFunctionTools: any,
     data: any
   ) => {
-    if(data.answer){
-      followupContentRef.current += data.answer;
-    }
+    // if(data.answer){
+    //   followupContentRef.current = followupContentRef.current + data.answer;
+    // }
+    data.thought &&
+      (followupContentRef.current = followupContentRef.current + data.thought);
 
     //   export type ToolCall = {
     //     name: string;
@@ -1090,7 +1092,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         });
       }
     }
-    
   };
 
   // 通用的 followup 生成方法
