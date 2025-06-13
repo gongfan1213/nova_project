@@ -262,7 +262,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     return undefined;
   };
 
-  const contextValue: ThreadContentType = {
+  const contextValue = useMemo(() => ({
     threadId,
     userThreads,
     isUserThreadsLoading,
@@ -277,7 +277,22 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     setThreadId,
     setModelName,
     setModelConfig,
-  };
+  }), [
+    threadId,
+    userThreads,
+    isUserThreadsLoading,
+    modelName,
+    modelConfig,
+    modelConfigs,
+    createThreadLoading,
+    getThread,
+    createThread,
+    getUserThreads,
+    deleteThread,
+    setThreadId,
+    setModelName,
+    setModelConfig,
+  ]);
 
   return (
     <ThreadContext.Provider value={contextValue}>

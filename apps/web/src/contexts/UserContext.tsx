@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useMemo,
 } from "react";
 import { SKIP_AUTH, DEFAULT_MOCK_USER } from "@/lib/auth-config";
 
@@ -59,11 +60,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return supabaseUser || undefined;
   }
 
-  const contextValue: UserContentType = {
+  const contextValue = useMemo(() => ({
     getUser,
     user,
     loading,
-  };
+  }), [getUser, user, loading]);
 
   return (
     <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>

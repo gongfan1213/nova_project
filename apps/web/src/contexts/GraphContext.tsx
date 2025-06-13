@@ -30,6 +30,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useMemo,
 } from "react";
 import { convertToArtifactV3, updateHighlightedMarkdown } from "./utils";
 import { debounce } from "lodash";
@@ -1052,7 +1053,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const contextValue: GraphContentType = {
+  const contextValue = useMemo(() => ({
     graphData: {
       runId,
       isStreaming,
@@ -1081,7 +1082,34 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       switchSelectedThread,
       setUpdateRenderedArtifactRequired,
     },
-  };
+  }), [
+    runId,
+    isStreaming,
+    error,
+    selectedBlocks,
+    messages,
+    artifact,
+    updateRenderedArtifactRequired,
+    isArtifactSaved,
+    firstTokenReceived,
+    feedbackSubmitted,
+    chatStarted,
+    artifactUpdateFailed,
+    searchEnabled,
+    setSearchEnabled,
+    setChatStarted,
+    setIsStreaming,
+    setFeedbackSubmitted,
+    setArtifact,
+    setSelectedBlocks,
+    setSelectedArtifact,
+    setMessages,
+    streamMessageV2,
+    setArtifactContent,
+    clearState,
+    switchSelectedThread,
+    setUpdateRenderedArtifactRequired,
+  ]);
 
   return (
     <GraphContext.Provider value={contextValue}>

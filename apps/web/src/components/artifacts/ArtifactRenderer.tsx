@@ -8,11 +8,11 @@ import {
 } from "@opencanvas/shared/types";
 import { EditorView } from "@codemirror/view";
 import { HumanMessage } from "@langchain/core/messages";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { ActionsToolbar, CodeToolBar } from "./actions_toolbar";
-import { CodeRenderer } from "./CodeRenderer";
 import { TextRenderer } from "./TextRenderer";
+import { CodeRenderer } from "./CodeRenderer";
 import { CustomQuickActions } from "./actions_toolbar/custom";
 import { getArtifactContent } from "@opencanvas/shared/utils/artifacts";
 import { ArtifactLoading } from "./ArtifactLoading";
@@ -35,6 +35,9 @@ interface SelectionBox {
   left: number;
   text: string;
 }
+
+const MemoTextRenderer = React.memo(TextRenderer);
+const MemoCodeRenderer = React.memo(CodeRenderer);
 
 function ArtifactRendererComponent(props: ArtifactRendererProps) {
   const { graphData } = useGraphContext();
@@ -118,14 +121,14 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
     }
   }, []);
 
-  const handleCleanupState = () => {
+  const handleCleanupState = useCallback(() => {
     setIsInputVisible(false);
     setSelectionBox(undefined);
     setSelectionIndexes(undefined);
     setIsSelectionActive(false);
     setIsValidSelectionOrigin(false);
     setInputValue("");
-  };
+  }, []);
 
   const handleDocumentMouseDown = useCallback(
     (event: MouseEvent) => {
@@ -144,25 +147,15 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
     event.stopPropagation();
   }, []);
 
-  const handleSubmit = async (content: string) => {
-    // 这个是 highlightedText 的 submit
+  const handleSubmit = useCallback(async (content: string) => {
     const humanMessage = new HumanMessage({
       content,
       id: uuidv4(),
     });
-
-
     setMessages((prevMessages) => [...prevMessages, humanMessage]);
     handleCleanupState();
-    // console.log('hans-fullMarkdown', artifactContentRef.current?.innerText);
-    // console.log(
-    //   "hans-getArtifactContent(artifact)",
-    //   getArtifactContent(artifact as ArtifactV3)
-    // );
     const currentArtifact: any = getArtifactContent(artifact as ArtifactV3);
-    
     await streamMessage({
-      //
       highlightedText: {
         fullMarkdown: currentArtifact?.fullMarkdown || "",
         markdownBlock: selectionBox?.text || "",
@@ -176,7 +169,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
         },
       }),
     });
-  };
+  }, [artifact, handleCleanupState, selectionBox, selectionIndexes, setMessages, streamMessage]);
 
   useEffect(() => {
     document.addEventListener("mouseup", handleMouseUp);
@@ -272,38 +265,35 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
     }
   }, [selectedBlocks, isSelectionActive]);
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Check if we're in an input/textarea element
-      const activeElement = document.activeElement;
-      const isInputActive =
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement;
-
-      // If selection states are active and we're not in an input field
-      if (
-        (isInputVisible || selectionBox || isSelectionActive) &&
-        !isInputActive
-      ) {
-        // Check if the key is a character key or backspace/delete
-        if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
-          handleCleanupState();
-        }
-      }
-
-      // Handle escape key for input box
-      if ((isInputVisible || isSelectionActive) && e.key === "Escape") {
+  const handleKeyPress = useCallback((e: KeyboardEvent) => {
+    const activeElement = document.activeElement;
+    const isInputActive =
+      activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement;
+    if (
+      (isInputVisible || selectionBox || isSelectionActive) &&
+      !isInputActive
+    ) {
+      if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
         handleCleanupState();
       }
-    };
+    }
+    if ((isInputVisible || isSelectionActive) && e.key === "Escape") {
+      handleCleanupState();
+    }
+  }, [isInputVisible, selectionBox, isSelectionActive, handleCleanupState]);
 
+  useEffect(() => {
     document.addEventListener("keydown", handleKeyPress);
     return () => document.removeEventListener("keydown", handleKeyPress);
-  }, [isInputVisible, selectionBox, isSelectionActive]);
+  }, [handleKeyPress]);
 
-  const currentArtifactContent = artifact
-    ? getArtifactContent(artifact)
-    : undefined;
+  const currentArtifactContent = useMemo<ArtifactMarkdownV3 | ArtifactCodeV3 | undefined>(() => {
+    if (!artifact) return undefined;
+    return artifact.contents.find(
+      (c: ArtifactMarkdownV3 | ArtifactCodeV3) => c.index === artifact.currentIndex
+    );
+  }, [artifact]);
 
   if (!artifact && isStreaming) {
     return <ArtifactLoading />;
@@ -355,16 +345,17 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
             onMouseEnter={() => setIsHoveringOverArtifact(true)}
             onMouseLeave={() => setIsHoveringOverArtifact(false)}
           >
+            {console.log('渲染当前artifact内容', currentArtifactContent)}
             {currentArtifactContent.type === "text" ? (
-              <TextRenderer
+              <MemoTextRenderer
                 isInputVisible={isInputVisible}
                 isEditing={props.isEditing}
                 isHovering={isHoveringOverArtifact}
-                projectId={props.projectId}
+                projectId={props.projectId || ''}
               />
             ) : null}
             {currentArtifactContent.type === "code" ? (
-              <CodeRenderer
+              <MemoCodeRenderer
                 editorRef={editorRef}
                 isHovering={isHoveringOverArtifact}
               />

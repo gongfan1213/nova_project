@@ -9,6 +9,7 @@ import {
   SetStateAction,
   useContext,
   useState,
+  useMemo,
 } from "react";
 import { createSupabaseClient, Assistant } from "@/lib/supabase-assistant-client";
 import { getCookie, removeCookie } from "@/lib/cookies";
@@ -400,7 +401,7 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     setIsLoadingAllAssistants(false);
   };
 
-  const contextValue: AssistantContentType = {
+  const contextValue = useMemo(() => ({
     assistants,
     selectedAssistant,
     isLoadingAllAssistants,
@@ -413,7 +414,20 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     createCustomAssistant,
     editCustomAssistant,
     setSelectedAssistant,
-  };
+  }), [
+    assistants,
+    selectedAssistant,
+    isLoadingAllAssistants,
+    isDeletingAssistant,
+    isCreatingAssistant,
+    isEditingAssistant,
+    getOrCreateAssistant,
+    getAssistants,
+    deleteAssistant,
+    createCustomAssistant,
+    editCustomAssistant,
+    setSelectedAssistant,
+  ]);
 
   return (
     <AssistantContext.Provider value={contextValue}>
