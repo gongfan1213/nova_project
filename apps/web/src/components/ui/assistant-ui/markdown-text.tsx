@@ -23,6 +23,28 @@ const MarkdownTextImpl = () => {
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
+        // 能加特殊标签吗？
+        think: ({ node: _node, className, ...props }) => (
+          <div
+            className={cn(
+              "my-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-4 dark:bg-blue-950/30",
+              "before:content-['💭_思考:'] before:text-blue-600 before:font-semibold before:block before:mb-2 dark:before:text-blue-400",
+              className
+            )}
+            {...props}
+          />
+        ),
+        message: ({ node: _node, className, ...props }) => (
+          <div
+            className={cn(
+              "my-4 rounded-lg border-l-4 border-green-500 bg-green-50 p-4 dark:bg-green-950/30",
+              "before:content-[''] before:text-green-600 before:font-semibold before:block before:mb-2 dark:before:text-green-400",
+              className
+            )}
+            {...props}
+          />
+        ),
+        //
         h1: ({ node: _node, className, ...props }) => (
           <h1
             className={cn(
