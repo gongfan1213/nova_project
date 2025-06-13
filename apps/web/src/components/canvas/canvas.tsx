@@ -308,7 +308,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
             />
           </ResizablePanel>
           {/*  */}
-          {/* {!projectCollapsed && (
+          {!projectCollapsed && (
             <>
               <ResizableHandle />
               <ResizablePanel
@@ -330,7 +330,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
                 </div>
               </ResizablePanel>
             </>
-          )} */}
+          )}
         </>
       )}
     </ResizablePanelGroup>

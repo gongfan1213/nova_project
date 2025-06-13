@@ -27,6 +27,7 @@ import { Button } from "../ui/button";
 import { WEB_SEARCH_RESULTS_QUERY_PARAM } from "@/constants";
 import { Globe } from "lucide-react";
 import { useQueryState } from "nuqs";
+import { ToolCallRenderer, groupToolCalls } from "./ToolCallRenderer";
 
 interface AssistantMessageProps {
   runId: string | undefined;
@@ -107,6 +108,7 @@ export const AssistantMessage: FC<AssistantMessageProps> = ({
 }) => {
   const message = useMessage();
   const { isLast } = message;
+  // 
   const isThinkingMessage = message.id.startsWith("thinking-");
   const isWebSearchMessage = message.id.startsWith("web-search-results-");
 
@@ -135,6 +137,21 @@ export const AssistantMessage: FC<AssistantMessageProps> = ({
             />
           </MessagePrimitive.If>
         )}
+        {/* Function Tools */}
+        {/* <div className="">{JSON.stringify(message?.metadata?.custom?.tool_calls)}</div> */}
+
+        {(() => {
+          const toolCalls = (message as any).metadata?.custom?.tool_calls || []
+          const toolGroups = groupToolCalls(toolCalls)
+          
+          return toolGroups.map((toolGroup, index) => (
+            <ToolCallRenderer
+              key={`${message.id}-tool-group-${index}`}
+              toolGroup={toolGroup}
+              className="mt-4"
+            />
+          ))
+        })()}
       </div>
     </MessagePrimitive.Root>
   );

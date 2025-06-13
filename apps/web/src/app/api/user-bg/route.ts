@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     const { type, name, description, content } = body
 
     // 验证必需字段
-    if (!type || !name || !description || !content) {
+    if (!type || !name || !content) {
       return NextResponse.json(
         { error: 'Missing required fields: type, name, description, content' },
         { status: 400 }

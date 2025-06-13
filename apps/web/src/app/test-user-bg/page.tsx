@@ -61,7 +61,7 @@ export default function TestUserBgPage() {
   };
 
   const createNewItem = async () => {
-    if (!newItemForm.name || !newItemForm.description || !newItemForm.content) {
+    if (!newItemForm.name || !newItemForm.content) {
       setMessage("❌ 请填写所有必填字段");
       return;
     }
@@ -324,23 +324,6 @@ export default function TestUserBgPage() {
                     value={editingItem.name}
                     onChange={(e) =>
                       setEditingItem({ ...editingItem, name: e.target.value })
-                    }
-                    className="w-full border rounded-lg px-3 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    描述 *
-                  </label>
-                  <input
-                    type="text"
-                    value={editingItem.description}
-                    onChange={(e) =>
-                      setEditingItem({
-                        ...editingItem,
-                        description: e.target.value,
-                      })
                     }
                     className="w-full border rounded-lg px-3 py-2"
                   />

@@ -256,7 +256,7 @@ export function TextRendererComponent(props: TextRendererProps) {
     <div className="w-full h-full mt-2 flex flex-col border-t-[1px] border-gray-200 overflow-y-auto py-5 relative">
       {props.isHovering && artifact && (
         <div className="absolute flex gap-2 top-2 right-4 z-10">
-          <div className="relative">
+          {/* <div className="relative">
             <TooltipIconButton
               tooltip="我的笔记"
               variant="outline"
@@ -266,10 +266,10 @@ export function TextRendererComponent(props: TextRendererProps) {
               <StickyNote className="w-5 h-5 text-gray-600" />
             </TooltipIconButton>
             <MyNotePopover open={openNote} onClose={() => setOpenNote(false)} />
-          </div>
+          </div> */}
           <CopyText currentArtifactContent={getArtifactContent(artifact)} />
           <ViewRawText isRawView={isRawView} setIsRawView={setIsRawView} />
-          <div className="relative">
+          {/* <div className="relative">
             <TooltipIconButton
               tooltip="我的草稿"
               variant="outline"
@@ -279,7 +279,7 @@ export function TextRendererComponent(props: TextRendererProps) {
               <BookOpen className="w-5 h-5 text-gray-600" />
             </TooltipIconButton>
             <XiaohongshuPopover open={openXhs} onClose={() => setOpenXhs(false)} projectId={props.projectId} />
-          </div>
+          </div> */}
         </div>
       )}
       {isRawView ? (

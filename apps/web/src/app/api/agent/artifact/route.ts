@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const NEXT_PUBLIC_USE_BLUE_API_DIFY = process.env.NEXT_PUBLIC_USE_BLUE_API_DIFY === 'true'
 interface AgentRequestBody {
   query: string
   conversation_id?: string
@@ -24,14 +25,30 @@ export async function POST(req: NextRequest) {
     }
 
     // 目标 API 地址
-    const targetUrl = 'https://api.dify.ai/v1/chat-messages'
+    let targetUrl = 'https://api.dify.ai/v1/chat-messages'
+    
 
     // 准备请求头
-    const headers = {
+    let headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer app-OO49SYLKS9blEdwzxCLc7RvU',
       'User-Agent': 'Nova-Agent/1.0',
     }
+    if (NEXT_PUBLIC_USE_BLUE_API_DIFY) {
+      // targetUrl = 'http://bmc-dify.bluemediagroup.cn/v1/chat-messages'
+      // headers = {
+      //   'Content-Type': 'application/json',
+      //   'Authorization': 'Bearer app-ax5QowMXWr3nYY1BtszpQoIk',
+      //   'User-Agent': 'Nova-Agent/1.0',
+      // }
+      targetUrl = 'https://api.dify.ai/v1/chat-messages'
+      headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer app-V8DD4qtQzqpVZpvtX9ba4CgI',
+        'User-Agent': 'Nova-Agent/1.0',
+      }
+    }
+
     const data = {
       "inputs": {},
       "query": query,

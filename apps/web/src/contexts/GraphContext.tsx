@@ -291,6 +291,9 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 初始化返回数据
     // 从当前状态获取初始消息，确保包含用户输入
     let finalMessages: BaseMessage[] = [...messages];
+    let followupContent = ""
+    let finalFunctionTools: any[] = []
+    const followupMessageId = `followup-${uuidv4()}`
 
     // 如果有新的用户消息需要添加，确保它们包含必要的内容
     if (params.messages && params.messages.length > 0) {
@@ -345,12 +348,39 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           const chunk = decoder.decode(value, { stream: true });
           const lines = chunk.split("\n");
 
+          
           for (const line of lines) {
             if (line.trim() && line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
-                console.log('hans-web-streamFirstTimeGeneration', data);
-                if (data.event === "message") {
+                console.log("hans-web-streamFirstTimeGeneration", data);
+                if (
+                  data.event === "function_call" ||
+                  data.event === "agent_thought"
+                ) {
+                  console.log(
+                    "hans-web-streamFirstTimeGeneration-function_call",
+                    data
+                  );
+
+                  console.log(
+                    "hans-web-streamFirstTimeGeneration-agent_ data.thought",
+                    data.thought
+                  );
+                  setAgentMessage(
+                    followupContent,
+                    followupMessageId,
+                    finalMessages,
+                    finalFunctionTools,
+                    data
+                  );
+
+                  continue;
+                }
+                if (
+                  data.event === "message" ||
+                  data.event === "agent_message"
+                ) {
                   // 提取 conversation_id
                   if (data.conversation_id && !receivedConversationId) {
                     receivedConversationId = data.conversation_id;
@@ -380,6 +410,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                     finalArtifact = newArtifact;
                   }
                 }
+
               } catch (e) {
                 // 忽略解析错误
               }
@@ -435,6 +466,10 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
+    let followupContent = ""
+    let finalMessages: BaseMessage[] = []
+    let finalFunctionTools: any[] = []
+    const followupMessageId = `followup-${uuidv4()}`
 
     setFirstTokenReceived(false);
     setError(false);
@@ -482,7 +517,34 @@ export function GraphProvider({ children }: { children: ReactNode }) {
               try {
                 const data = JSON.parse(line.slice(6));
                 console.log('hans-web-streamRewriteArtifact-data', data);
-                if (data.event === "message" && data.answer) {
+                if (data.event === "function_call" || data.event === "agent_thought") {
+                  console.log('hans-web-streamFirstTimeGeneration-function_call', data);
+                  continue;
+                }
+                if (
+                  data.event === "function_call" ||
+                  data.event === "agent_thought"
+                ) {
+                  console.log(
+                    "hans-web-streamFirstTimeGeneration-function_call",
+                    data
+                  );
+
+                  console.log(
+                    "hans-web-streamFirstTimeGeneration-agent_ data.thought",
+                    data.thought
+                  );
+                  setAgentMessage(
+                    followupContent,
+                    followupMessageId,
+                    finalMessages,
+                    finalFunctionTools,
+                    data
+                  );
+
+                  continue;
+                }
+                if (data.event === "message" || data.event === "agent_message" && data.answer) {
                   artifactContent += data.answer;
                   // index 从1 开始
                   let currentIndex = artifact?.currentIndex || 0;
@@ -955,12 +1017,88 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     setCurrentThread(thread);
   };
 
+  const setAgentMessage = (
+    followupContent: string,
+    followupMessageId: any,
+    finalMessages: any,
+    finalFunctionTools: any,
+    data: any
+  ) => {
+    followupContent += data.thought;
+
+    //   export type ToolCall = {
+    //     name: string;
+    //     args: Record<string, any>;
+    //     id?: string;
+    //     type?: "tool_call";
+    // };
+    finalFunctionTools.push({
+      ...data,
+      name: data.tool,
+      args: data.tool_input,
+      type: "tool_call",
+    });
+
+    // 创建 followup 消息
+    const followupMessage = new AIMessage({
+      id: followupMessageId,
+      content: followupContent,
+      tool_calls: finalFunctionTools,
+      additional_kwargs: {
+        tool_calls: finalFunctionTools,
+      },
+    });
+
+    // 更新 UI 状态中的消息
+    setMessages((prevMessages) => {
+      const existingIndex = prevMessages.findIndex(
+        (msg) => msg.id === followupMessageId
+      );
+      if (existingIndex >= 0) {
+        // 更新已存在的消息内容
+        const newMessages = [...prevMessages];
+        newMessages[existingIndex] = followupMessage;
+        return newMessages;
+      } else {
+        // 追加新消息
+        return [...prevMessages, followupMessage];
+      }
+    });
+
+    // 如果提供了 finalMessages 数组，也更新它（用于第一次生成的场景）
+    if (finalMessages) {
+      const existingIndex = finalMessages.findIndex(
+        (msg: any) => msg.id === followupMessageId
+      );
+      if (existingIndex >= 0) {
+        // 直接更新现有消息的内容
+        finalMessages[existingIndex] = followupMessage;
+        console.log("Updated existing followup message in finalMessages", {
+          index: existingIndex,
+          contentLength: followupContent.length,
+          totalMessages: finalMessages.length,
+        });
+      } else {
+        // 只在第一次添加消息时添加到数组
+        finalMessages.push(followupMessage);
+        console.log("Added new followup message to finalMessages", {
+          messageId: followupMessageId,
+          contentLength: followupContent.length,
+          totalMessages: finalMessages.length,
+        });
+      }
+    }
+    
+  };
+
   // 通用的 followup 生成方法
   const generateFollowup = async (
     artifactContent: string,
     chatHistory: string,
     finalMessages?: BaseMessage[]
   ) => {
+    // 跳过 generateFollowup
+    return true
     const followupResponse = await fetch("/api/agent/generate-followup", {
       method: "POST",
       headers: {

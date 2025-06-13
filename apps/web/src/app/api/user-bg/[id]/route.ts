@@ -18,7 +18,7 @@ export async function PUT(
     const { name, description, content } = body
 
     // 验证必需字段
-    if (!name || !description || !content) {
+    if (!name || !content) {
       return NextResponse.json(
         { error: 'Missing required fields: name, description, content' },
         { status: 400 }
