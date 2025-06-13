@@ -399,6 +399,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
 
                   if (data.answer) {
                     artifactContent += data.answer;
+                    // 如果有 <<think>xxx</think> 则只保留 <message>xxx</message>中的内容，则去掉 <<think>xxx</think>和<message>xxx</message>
+                    followupContentRef.current =
+                      followupContentRef.current.replace(
+                        /<think>[\s\S]*<\/think>[\s\S]*<message>[\s\S]*<\/message>/g,
+                        ""
+                      );
 
                     // 实时更新artifact显示
                     const newArtifact: ArtifactV3 = {
@@ -1029,6 +1035,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // }
     data.thought &&
       (followupContentRef.current = followupContentRef.current + data.thought);
+    // 需要替换掉 <artifact>xxx</artifact>
+    followupContentRef.current = followupContentRef.current.replace(
+      /<artifact>[\s\S]*<\/artifact>/g,
+      ""
+    );
 
     //   export type ToolCall = {
     //     name: string;
