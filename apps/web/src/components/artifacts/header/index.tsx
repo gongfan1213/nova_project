@@ -24,14 +24,15 @@ interface ArtifactHeaderProps {
   artifactUpdateFailed: boolean;
   chatCollapsed: boolean;
   setChatCollapsed: (c: boolean) => void;
+  showAllCards: boolean;
+  setShowAllCards: (show: boolean) => void;
 }
 
 export function ArtifactHeader(props: ArtifactHeaderProps) {
-  const [viewMode, setViewMode] = useState<'editor' | 'all-cards' | 'card-detail'>('editor');
   const [threadId, setThreadId] = useState<string | null>(null);
-  const [allCards, setAllCards] = useState<{ id: string; title: string; content: string }[]>([]);
+  const [allCards, setAllCards] = useState<{ id: string; index: number; title: string; content: string }[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<null | { id: string; title: string; content: string }>(null);
+  const [selectedCard, setSelectedCard] = useState<null | { id: string; index: number; title: string; content: string }>(null);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [showCardContent, setShowCardContent] = useState<null | { id: string; title: string; content: string }>(null);
   const supabase = createSupabaseClient();
@@ -60,12 +61,13 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
       }
       const { data: contents } = await supabase
         .from('artifact_contents')
-        .select('id, title, full_markdown')
+        .select('id, index, title, full_markdown')
         .in('artifact_id', artifacts.map(a => a.id))
         .eq('type', 'text');
       if (contents) {
         setAllCards(contents.map(c => ({
           id: c.id,
+          index: c.index,
           title: c.title,
           content: c.full_markdown || ''
         })));
@@ -85,45 +87,32 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
 
   // 点击缩略卡片按钮
   const handleShowAllCards = () => {
-    setViewMode(prev => {
-      if (prev === 'all-cards') {
-        return 'editor'
-      } else {
-        fetchAllCards()
-        return 'all-cards'
-      }
-    })
+    if (props.showAllCards) {
+      props.setShowAllCards(false)
+    } else {
+      fetchAllCards()
+      props.setShowAllCards(true)
+    }
   }
 
   // 渲染主内容区
   let mainContent = null;
-  // 获取当前artifact内容
+  // 获取当前artifact内容（移除props.currentArtifactContent依赖，直接用context里的artifact）
   const { artifact } = graphData;
   let currentCardContent = null;
   if (artifact && artifact.contents && artifact.currentIndex) {
-    currentCardContent = artifact.contents.find(
+    const found = artifact.contents.find(
       (c: any) => c.index === artifact.currentIndex
     );
-    if (currentCardContent) {
+    if (found) {
       currentCardContent = {
-        id: currentCardContent.id || '',
-        title: currentCardContent.title,
-        content: currentCardContent.fullMarkdown || currentCardContent.code || '',
+        id: found.id || '',
+        title: found.title,
+        content: found.fullMarkdown || found.code || '',
       };
     }
   }
-  if (viewMode === 'editor') {
-    mainContent = (
-      <TextRenderer
-        isEditing={false}
-        isHovering={false}
-        isInputVisible={true}
-        projectId={threadId || ''}
-        cardContent={currentCardContent}
-        onBackToEditor={() => {}}
-      />
-    );
-  } else if (viewMode === 'all-cards') {
+  if (props.showAllCards) {
     mainContent = (
       <div className="p-8">
         {/* 只显示卡片列表 */}
@@ -139,7 +128,10 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
                   key={markdown.id}
                   className="hover:shadow-lg transition-shadow cursor-pointer relative group"
                   onClick={() => {
-                    setShowCardContent(markdown)
+                    if (markdown.index !== undefined) {
+                      graphData.setSelectedArtifact(markdown.index)
+                      props.setShowAllCards(false)
+                    }
                   }}
                   onMouseEnter={() => setHoveredCardId(markdown.id)}
                   onMouseLeave={() => setHoveredCardId(null)}
@@ -167,21 +159,6 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
             )}
           </div>
         </div>
-        {/* 卡片内容区域 */}
-        {showCardContent && (
-          <div className="mt-8 p-6 bg-white rounded shadow">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">{showCardContent.title}</h2>
-              <button
-                className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                onClick={() => setShowCardContent(null)}
-              >
-                关闭
-              </button>
-            </div>
-            <div className="whitespace-pre-wrap text-base text-gray-800">{showCardContent.content}</div>
-          </div>
-        )}
       </div>
     );
   }
@@ -227,7 +204,7 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
           <ReflectionsDialog selectedAssistant={props.selectedAssistant} />
         </div>
       </div>
-      {/* 主内容区切换显示 */}
+      {/* 主内容区互斥显示 */}
       <div className="w-full">
         {mainContent}
       </div>

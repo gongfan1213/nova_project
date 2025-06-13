@@ -69,6 +69,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
   const [inputValue, setInputValue] = useState("");
   const [isHoveringOverArtifact, setIsHoveringOverArtifact] = useState(false);
   const [isValidSelectionOrigin, setIsValidSelectionOrigin] = useState(false);
+  const [showAllCards, setShowAllCards] = useState(false);
 
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
@@ -325,63 +326,67 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
         artifactUpdateFailed={artifactUpdateFailed}
         chatCollapsed={props.chatCollapsed}
         setChatCollapsed={props.setChatCollapsed}
+        showAllCards={showAllCards}
+        setShowAllCards={setShowAllCards}
       />
-      <div
-        ref={contentRef}
-        className={cn(
-          "flex justify-center h-full",
-          currentArtifactContent.type === "code" ? "pt-[10px]" : ""
-        )}
-      >
+      {!showAllCards && (
         <div
+          ref={contentRef}
           className={cn(
-            "relative min-h-full",
-            currentArtifactContent.type === "code" ? "min-w-full" : "min-w-full"
+            "flex justify-center h-full",
+            currentArtifactContent.type === "code" ? "pt-[10px]" : ""
           )}
         >
           <div
-            className="h-full"
-            ref={artifactContentRef}
-            onMouseEnter={() => setIsHoveringOverArtifact(true)}
-            onMouseLeave={() => setIsHoveringOverArtifact(false)}
+            className={cn(
+              "relative min-h-full",
+              currentArtifactContent.type === "code" ? "min-w-full" : "min-w-full"
+            )}
           >
-            {console.log('渲染当前artifact内容', currentArtifactContent)}
-            {currentArtifactContent.type === "text" ? (
-              <MemoTextRenderer
-                isInputVisible={isInputVisible}
-                isEditing={props.isEditing}
-                isHovering={isHoveringOverArtifact}
-                projectId={props.projectId || ''}
-              />
-            ) : null}
-            {currentArtifactContent.type === "code" ? (
-              <MemoCodeRenderer
-                editorRef={editorRef}
-                isHovering={isHoveringOverArtifact}
-              />
-            ) : null}
+            <div
+              className="h-full"
+              ref={artifactContentRef}
+              onMouseEnter={() => setIsHoveringOverArtifact(true)}
+              onMouseLeave={() => setIsHoveringOverArtifact(false)}
+            >
+              {console.log('渲染当前artifact内容', currentArtifactContent)}
+              {currentArtifactContent.type === "text" ? (
+                <MemoTextRenderer
+                  isInputVisible={isInputVisible}
+                  isEditing={props.isEditing}
+                  isHovering={isHoveringOverArtifact}
+                  projectId={props.projectId || ''}
+                />
+              ) : null}
+              {currentArtifactContent.type === "code" ? (
+                <MemoCodeRenderer
+                  editorRef={editorRef}
+                  isHovering={isHoveringOverArtifact}
+                />
+              ) : null}
+            </div>
+            <div
+              ref={highlightLayerRef}
+              className="absolute top-0 left-0 w-full h-full pointer-events-none"
+            />
           </div>
-          <div
-            ref={highlightLayerRef}
-            className="absolute top-0 left-0 w-full h-full pointer-events-none"
-          />
+          {selectionBox && isSelectionActive && isValidSelectionOrigin && (
+            <AskOpenCanvas
+              ref={selectionBoxRef}
+              inputValue={inputValue}
+              setInputValue={setInputValue}
+              isInputVisible={isInputVisible}
+              selectionBox={selectionBox}
+              setIsInputVisible={setIsInputVisible}
+              handleSubmitMessage={handleSubmit}
+              handleSelectionBoxMouseDown={handleSelectionBoxMouseDown}
+              artifact={artifact}
+              selectionIndexes={selectionIndexes}
+              handleCleanupState={handleCleanupState}
+            />
+          )}
         </div>
-        {selectionBox && isSelectionActive && isValidSelectionOrigin && (
-          <AskOpenCanvas
-            ref={selectionBoxRef}
-            inputValue={inputValue}
-            setInputValue={setInputValue}
-            isInputVisible={isInputVisible}
-            selectionBox={selectionBox}
-            setIsInputVisible={setIsInputVisible}
-            handleSubmitMessage={handleSubmit}
-            handleSelectionBoxMouseDown={handleSelectionBoxMouseDown}
-            artifact={artifact}
-            selectionIndexes={selectionIndexes}
-            handleCleanupState={handleCleanupState}
-          />
-        )}
-      </div>
+      )}
       {/* <CustomQuickActions
         streamMessage={streamMessage}
         assistantId={selectedAssistant?.assistant_id}

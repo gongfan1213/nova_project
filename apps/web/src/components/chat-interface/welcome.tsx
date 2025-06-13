@@ -1,7 +1,7 @@
 import { ProgrammingLanguageOptions } from "@opencanvas/shared/types";
 import { ThreadPrimitive, useThreadRuntime } from "@assistant-ui/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FC, useMemo } from "react";
+import { FC, useMemo, useState } from "react";
 import { TighterText } from "../ui/header";
 import { NotebookPen } from "lucide-react";
 import { ProgrammingLanguagesDropdown } from "../ui/programming-lang-dropdown";
@@ -136,6 +136,7 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
   props: ThreadWelcomeProps
 ) => {
   const threadRuntime = useThreadRuntime();
+  const [showComposer, setShowComposer] = useState(true);
 
   // 卡片点击时，自动发送消息并跳转协作区
   const handleCardClick = (title: string) => {
@@ -144,6 +145,10 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
       content: [{ type: "text", text: title }],
     });
   };
+
+  // 控制缩略卡片弹窗的显示与关闭
+  const handleOpenCards = () => setShowComposer(false);
+  const handleCloseCards = () => setShowComposer(true);
 
   return (
     <ThreadPrimitive.Empty>
@@ -158,7 +163,7 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
           </TighterText>
           <div className="mt-8 w-full">
             <QuickStartButtons
-              composer={props.composer}
+              composer={showComposer ? props.composer : null}
               handleQuickStart={props.handleQuickStart}
               searchEnabled={props.searchEnabled}
             />
@@ -171,7 +176,7 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
           
         </div>
       </div>
-      <ChineseFeatureCards onCardClick={handleCardClick} />
+      <ChineseFeatureCards onCardClick={handleCardClick} onOpenCards={handleOpenCards} onCloseCards={handleCloseCards} />
     </ThreadPrimitive.Empty>
   );
 };
