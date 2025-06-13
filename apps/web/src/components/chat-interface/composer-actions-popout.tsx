@@ -69,6 +69,8 @@ export function ComposerActionsPopOut(props: ComposerActionsPopOutProps) {
     },
   };
 
+  return null
+
   return (
     <motion.div
       onMouseEnter={() => {

@@ -98,7 +98,7 @@ const EditModal = ({ isOpen, onClose, type, item, onSave, isLoading = false }: E
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.description.trim() || !formData.content.trim()) {
+    if (!formData.name.trim() || !formData.content.trim()) {
       return;
     }
     onSave(formData);
@@ -133,20 +133,6 @@ const EditModal = ({ isOpen, onClose, type, item, onSave, isLoading = false }: E
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={`请输入${cardConfig?.title}名称`}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                描述 *
-              </label>
-              <input
-                type="text"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder={`请输入${cardConfig?.title}描述`}
                 required
               />
             </div>
@@ -296,7 +282,7 @@ const Dropdown = ({ type, items, currentItem, onAddNew, onEdit, onDelete, onSele
                           <span className="ml-2 text-blue-500">✓</span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 truncate">{item.description}</div>
+                      <div className="text-sm text-gray-500 truncate">{item.content?.slice(0, 30)}</div>
                     </div>
                     
                     {hoveredItem === item.id && (

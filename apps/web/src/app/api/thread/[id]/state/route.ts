@@ -131,26 +131,12 @@ export async function PUT(
         
         // 过滤并映射消息，确保内容有效
         const validMessages = values.messages.filter((message: any) => {
-          // 处理 LangChain 格式的消息内容
-          let content = message.content;
-          if (message.lc && message.kwargs && message.kwargs.content) {
-            content = message.kwargs.content;
-          }
-          
-          if (!message || content === null || content === undefined) {
-            console.warn('Filtering out message with null/undefined content:', message)
+          if (!message) {
+            console.warn('Filtering out null/undefined message:', message)
             return false
           }
-          const contentStr = typeof content === 'string' 
-            ? content 
-            : JSON.stringify(content)
-          const isValid = contentStr && contentStr.trim().length > 0;
           
-          if (!isValid) {
-            console.warn('Filtering out message with empty content:', { message, content, contentStr })
-          }
-          
-          return isValid;
+          return true;
         })
         
         console.log(`Filtered ${validMessages.length} valid messages from ${values.messages.length} total messages`)
@@ -192,7 +178,7 @@ export async function PUT(
             user_id: authRes.user.id,
             sequence_number: index + 1,
             type: messageType,
-            content: typeof content === 'string' ? content : JSON.stringify(content),
+            content: content ? (typeof content === 'string' ? content : JSON.stringify(content)) : '',
             additional_kwargs: additionalKwargs,
             response_metadata: responseMetadata,
             tool_calls: toolCalls,

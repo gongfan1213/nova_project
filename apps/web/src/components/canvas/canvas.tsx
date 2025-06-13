@@ -311,7 +311,6 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
           {!projectCollapsed && (
             <>
               <ResizableHandle />
-              {/*  */}
               <ResizablePanel
                 defaultSize={projectCollapsed ? 10 : 10}
                 maxSize={85}
@@ -321,11 +320,6 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
                 className="flex flex-row w-full"
               >
                 <div className="flex flex-col w-full">
-                  {/* <div className="w-full text-right">
-                    <button onClick={() => setProjectCollapsed(true)}>
-                      隐藏
-                    </button>
-                  </div> */}
                   <div className="">
                     <ProjectHistoryComponent
                       switchSelectedThreadCallback={() => {
