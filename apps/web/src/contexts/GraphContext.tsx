@@ -419,15 +419,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // 第二步：调用generateFollowup API
-      const chatHistory = params.messages
-        ? params.messages
-            .map((msg) => `${msg.constructor.name}: ${msg.content}`)
-            .join("\n")
-        : "";
-
-      await generateFollowup(artifactContent, chatHistory, finalMessages);
-
     } catch (error) {
       console.error("Error in first time generation:", error);
       toast({
@@ -577,15 +568,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-
-      // 第二步：调用generateFollowup API
-      const chatHistory = params.messages
-        ? params.messages
-            .map((msg) => `${msg.constructor.name}: ${msg.content}`)
-            .join("\n")
-        : "";
-
-      await generateFollowup(artifactContent, chatHistory, messages);
 
     } catch (error) {
       console.error("Error in rewrite artifact:", error);
@@ -1097,8 +1079,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     chatHistory: string,
     finalMessages?: BaseMessage[]
   ) => {
-    // 跳过 generateFollowup
-    return true
     const followupResponse = await fetch("/api/agent/generate-followup", {
       method: "POST",
       headers: {
