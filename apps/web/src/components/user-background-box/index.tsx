@@ -18,30 +18,30 @@ interface CardData {
 const cardConfigs: CardData[] = [
   {
     type: "personalities",
-    title: "人设",
+    title: "账号人设定位",
     icon: "👤",
-    description: "管理AI的人格特征和行为模式",
+    description: "账号的核心身份标签",
     color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
   },
   {
     type: "intentions",
-    title: "意图",
+    title: "账号核心目标",
     icon: "🎯",
-    description: "设定AI的目标和执行意图",
+    description: "驱动你运营账号的最主要目标是？",
     color: "bg-green-50 border-green-200 hover:bg-green-100",
   },
   {
     type: "resources",
-    title: "资源",
+    title: "账号独家资源",
     icon: "📚",
-    description: "管理知识库和参考资料",
+    description: "运营账号的独特优势或可用资源？",
     color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
   },
   {
     type: "accountStyles",
-    title: "账号风格",
+    title: "账号内容风格",
     icon: "✨",
-    description: "定义输出的语调和格式风格",
+    description: "账号调性和呈现偏好",
     color: "bg-orange-50 border-orange-200 hover:bg-orange-100",
   },
 ];
@@ -427,7 +427,7 @@ export const UserBgBox = () => {
   };
 
   return (
-    <div className="w-full h-full p-6 bg-gray-50">
+    <div className="w-full h-full p-6 pb-2">
       {/* 标题 */}
       {/* <div className="mb-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-2">背景配置</h2>
@@ -435,7 +435,7 @@ export const UserBgBox = () => {
     </div> */}
 
       {/* 横向卡片布局 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-4 gap-4">
         {cardConfigs.map((card) => {
           const itemCount = getItemCount(card.type);
           const isActive = activeCard === card.type;
@@ -446,8 +446,6 @@ export const UserBgBox = () => {
               key={card.type}
               className={`flex flex-col
               rounded-lg border-2 cursor-pointer transition-all duration-200
-              ${card.color}
-              ${isActive ? "ring-2 ring-blue-500 ring-opacity-50" : ""}
             `}
               onClick={() => setActiveCard(card.type)}
             >
