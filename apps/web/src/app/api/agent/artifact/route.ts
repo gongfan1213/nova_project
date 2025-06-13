@@ -15,7 +15,7 @@ interface AgentResponse {
 
 export async function POST(req: NextRequest) {
   try {
-    const { query, conversation_id }: AgentRequestBody = await req.json()
+    const { query, conversation_id, inputs }: AgentRequestBody = await req.json()
 
     if (!query) {
       return NextResponse.json(
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     const data = {
-      "inputs": {},
+      "inputs": inputs || {},
       "query": query,
       "response_mode": "streaming",
       "conversation_id": conversation_id || "",

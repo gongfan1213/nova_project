@@ -37,6 +37,7 @@ import { useThreadContext } from "./ThreadProvider";
 import { useAssistantContext } from "./AssistantContext";
 import { useQueryState } from "nuqs";
 import { Thread, createSupabaseClient } from "@/lib/supabase-thread-client";
+import { useBgData } from "@/hooks/useBgData";
 
 // 定义对话数据类型
 interface ThreadData {
@@ -110,7 +111,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState(false);
   const [artifactUpdateFailed, setArtifactUpdateFailed] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(false);
-
+  const { personalities, intentions, resources, accountStyles } = useBgData();
   const [_] = useQueryState(WEB_SEARCH_RESULTS_QUERY_PARAM);
 
   useEffect(() => {
@@ -327,6 +328,14 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          inputs: {
+            character: `
+              人设：${personalities.map((p) => p.name).join(", ")}\n\n
+              核心目标：${intentions.map((i) => i.name).join(", ")}\n\n
+              独家资源：${resources.map((r) => r.name).join(", ")}\n\n
+              内容风格：${accountStyles.map((a) => a.name).join(", ")}\n\n
+            `,
+          },
           query: userQuery,
         }),
       });
@@ -481,6 +490,14 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          inputs: {
+            character: `
+              人设：${personalities.map((p) => p.name).join(", ")}\n\n
+              核心目标：${intentions.map((i) => i.name).join(", ")}\n\n
+              独家资源：${resources.map((r) => r.name).join(", ")}\n\n
+              内容风格：${accountStyles.map((a) => a.name).join(", ")}\n\n
+            `,
+          },
           query: userQuery,
           conversation_id: activeConversationId,
         }),
