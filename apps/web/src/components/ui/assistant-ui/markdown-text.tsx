@@ -22,8 +22,8 @@ import "katex/dist/katex.min.css"
 // Message 组件
 const MessageComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="message-tag my-2 p-3 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
-      children
+    <div className="message-tag my-2 p-3 bg-green-50 rounded-r-lg">
+      {children}
     </div>
   );
 }
@@ -100,11 +100,53 @@ const rehypeThink = () => {
   }
 }
 
+// 修复插件：处理解析器错误地将 message 嵌套在 think 内部的问题
+const rehypeFixNesting = () => {
+  return (tree: any) => {
+    visit(tree, 'element', (node, index, parent) => {
+      // 查找 think-component
+      if (
+        node.tagName === 'think-component' &&
+        parent &&
+        typeof index === 'number'
+      ) {
+        const messagesToHoist: any[] = []
+        let messageFound = false
+
+        // 过滤出 message-component 并将其从 think-component 的子节点中移除
+        const newChildren = node.children.filter((child: any) => {
+          if (
+            child.type === 'element' &&
+            child.tagName === 'message-component'
+          ) {
+            messagesToHoist.push(child)
+            messageFound = true
+            return false // 从 children 中移除
+          }
+          // 如果已经找到了 message，并且当前节点是空的文本节点（通常是换行符），也一并移除
+          if (messageFound && child.type === 'text' && child.value.trim() === '') {
+            return false
+          }
+          return true
+        })
+
+        // 如果找到了需要提升的 message-component
+        if (messagesToHoist.length > 0) {
+          node.children = newChildren
+
+          // 将 message-component 插入到 parent 的子节点中，使其成为 think-component 的兄弟节点
+          parent.children.splice(index + 1, 0, ...messagesToHoist)
+        }
+      }
+    })
+  }
+}
+
 const MarkdownTextImpl = () => {
   return (
     <MarkdownTextPrimitive
       remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex, rehypeRaw, rehypeThink]}
+      rehypePlugins={[rehypeKatex, rehypeRaw, rehypeThink, rehypeFixNesting]}
       remarkRehypeOptions={{
         allowDangerousHtml: true
       }}
