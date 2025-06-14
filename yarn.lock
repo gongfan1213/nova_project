@@ -1078,7 +1078,7 @@
     zod "^3.22.3"
     zod-to-json-schema "^3.22.5"
 
-"@langchain/core@^0.3.38", "@langchain/core@^0.3.57":
+"@langchain/core@^0.3.38":
   version "0.3.38"
   resolved "https://registry.yarnpkg.com/@langchain/core/-/core-0.3.38.tgz#e0675d978d5141c720d9a2e143550d4411afa3be"
   integrity sha512-o7mowk/0oIsYsPxRAJ3TKX6OG674HqcaNRged0sxaTegLAMyZDBDRXEAt3qoe5UfkHnqXAggDLjNVDhpMwECmg==
@@ -1089,6 +1089,24 @@
     decamelize "1.2.0"
     js-tiktoken "^1.0.12"
     langsmith ">=0.2.8 <0.4.0"
+    mustache "^4.2.0"
+    p-queue "^6.6.2"
+    p-retry "4"
+    uuid "^10.0.0"
+    zod "^3.22.4"
+    zod-to-json-schema "^3.22.3"
+
+"@langchain/core@^0.3.57":
+  version "0.3.57"
+  resolved "https://registry.npmmirror.com/@langchain/core/-/core-0.3.57.tgz#3e9d9414046873405f48c761fe632bd757250a91"
+  integrity sha512-jz28qCTKJmi47b6jqhQ6vYRTG5jRpqhtPQjriRTB5wR8mgvzo6xKs0fG/kExS3ZvM79ytD1npBvgf8i19xOo9Q==
+  dependencies:
+    "@cfworker/json-schema" "^4.0.2"
+    ansi-styles "^5.0.0"
+    camelcase "6"
+    decamelize "1.2.0"
+    js-tiktoken "^1.0.12"
+    langsmith "^0.3.29"
     mustache "^4.2.0"
     p-queue "^6.6.2"
     p-retry "4"
@@ -8950,7 +8968,7 @@ rehype-prism-plus@2.0.0, rehype-prism-plus@~2.0.0:
 
 rehype-raw@^7.0.0:
   version "7.0.0"
-  resolved "https://registry.yarnpkg.com/rehype-raw/-/rehype-raw-7.0.0.tgz#59d7348fd5dbef3807bbaa1d443efd2dd85ecee4"
+  resolved "https://registry.npmmirror.com/rehype-raw/-/rehype-raw-7.0.0.tgz#59d7348fd5dbef3807bbaa1d443efd2dd85ecee4"
   integrity sha512-/aE8hCfKlQeA8LmyeyQvQF3eBiLRGNlfBJEvWH7ivp9sBqs7TNqBL5X3v157rM4IFETqDnIOO+z5M/biZbo9Ww==
   dependencies:
     "@types/hast" "^3.0.0"
@@ -10179,7 +10197,7 @@ unist-util-visit@^4.0.0:
 
 unist-util-visit@^5.0.0, unist-util-visit@~5.0.0:
   version "5.0.0"
-  resolved "https://registry.yarnpkg.com/unist-util-visit/-/unist-util-visit-5.0.0.tgz#a7de1f31f72ffd3519ea71814cccf5fd6a9217d6"
+  resolved "https://registry.npmmirror.com/unist-util-visit/-/unist-util-visit-5.0.0.tgz#a7de1f31f72ffd3519ea71814cccf5fd6a9217d6"
   integrity sha512-MR04uvD+07cwl/yhVuVWAtw+3GOR/knlL55Nd/wAdblk27GCVt3lqpTivy/tkJcZoNPzTwS1Y+KMojlLDhoTzg==
   dependencies:
     "@types/unist" "^3.0.0"
