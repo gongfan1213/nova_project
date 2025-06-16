@@ -117,45 +117,53 @@ const rehypeMarkUnclosed = () => {
 };
 
 
-// 修复插件：处理解析器错误地将 message 嵌套在 think 内部的问题
+// 修复插件：处理解析器错误地将嵌套的 think 和 message 标签提升为平铺结构
 const rehypeFixNesting = () => {
   return (tree: any) => {
-    visit(tree, 'element', (node, index, parent) => {
-      // 查找 think-component
-      if (
-        node.tagName === 'think' &&
-        parent &&
-        typeof index === 'number'
-      ) {
-        const messagesToHoist: any[] = []
-        let messageFound = false
+    let hasChanges = true
+    
+    // 反复处理直到没有更多嵌套
+    while (hasChanges) {
+      hasChanges = false
+      
+      visit(tree, 'element', (node, index, parent) => {
+        // 处理 think 和 message 标签的嵌套
+        if (
+          (node.tagName === 'think' || node.tagName === 'message') &&
+          parent &&
+          typeof index === 'number'
+        ) {
+          const elementsToHoist: any[] = []
+          let elementFound = false
 
-        // 过滤出 message-component 并将其从 think-component 的子节点中移除
-        const newChildren = node.children.filter((child: any) => {
-          if (
-            child.type === 'element' &&
-            child.tagName === 'message'
-          ) {
-            messagesToHoist.push(child)
-            messageFound = true
-            return false // 从 children 中移除
+          // 过滤出嵌套的 think 和 message 元素并将其从当前节点的子节点中移除
+          const newChildren = node.children.filter((child: any) => {
+            if (
+              child.type === 'element' &&
+              (child.tagName === 'think' || child.tagName === 'message')
+            ) {
+              elementsToHoist.push(child)
+              elementFound = true
+              hasChanges = true
+              return false // 从 children 中移除
+            }
+            // 如果已经找到了嵌套元素，并且当前节点是空的文本节点（通常是换行符），也一并移除
+            if (elementFound && child.type === 'text' && child.value.trim() === '') {
+              return false
+            }
+            return true
+          })
+
+          // 如果找到了需要提升的元素
+          if (elementsToHoist.length > 0) {
+            node.children = newChildren
+
+            // 将嵌套的元素插入到 parent 的子节点中，使其成为当前节点的兄弟节点
+            parent.children.splice(index + 1, 0, ...elementsToHoist)
           }
-          // 如果已经找到了 message，并且当前节点是空的文本节点（通常是换行符），也一并移除
-          if (messageFound && child.type === 'text' && child.value.trim() === '') {
-            return false
-          }
-          return true
-        })
-
-        // 如果找到了需要提升的 message-component
-        if (messagesToHoist.length > 0) {
-          node.children = newChildren
-
-          // 将 message-component 插入到 parent 的子节点中，使其成为 think-component 的兄弟节点
-          parent.children.splice(index + 1, 0, ...messagesToHoist)
         }
-      }
-    })
+      })
+    }
   }
 }
 
