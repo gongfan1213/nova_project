@@ -7,98 +7,115 @@ import {
 } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
-import remarkMath from "remark-math";
-import { FC, memo, useState } from "react";
-import { CheckIcon, CopyIcon } from "lucide-react";
-import { visit } from "unist-util-visit";
 import rehypeRaw from "rehype-raw";
+import remarkMath from "remark-math";
+import { FC, memo, useState, type HTMLAttributes } from "react";
+import {
+  BrainCircuit,
+  CheckIcon,
+  ChevronDown,
+  CopyIcon,
+  Loader2,
+} from "lucide-react";
+// @ts-ignore
+import { visit } from "unist-util-visit";
 
 import { TooltipIconButton } from "@/components/ui/assistant-ui/tooltip-icon-button";
 import { SyntaxHighlighter } from "@/components/ui/assistant-ui/syntax-highlighter";
 import { cn } from "@/lib/utils";
 
-import "katex/dist/katex.min.css"
+import "katex/dist/katex.min.css";
 
-// Message 组件
-const MessageComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <div className="message-tag my-2 p-3 bg-green-50 rounded-r-lg">
-      {children}
-    </div>
-  );
+interface ThinkComponentProps extends HTMLAttributes<HTMLDivElement> {
+  "data-unclosed"?: boolean;
 }
 
-// Think 组件
-const ThinkComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 处理文本内容，保留换行符
-  const formatContent = (content: React.ReactNode) => {
-    if (typeof content === 'string') {
-      return content.split('\n').map((line, index, array) => (
-        <span key={index}>
-          {line}
-          {index < array.length - 1 && <br />}
-        </span>
-      ))
+const ThinkComponent = ({
+  className,
+  "data-unclosed": unclosed,
+  children,
+  ...props
+}: ThinkComponentProps) => {
+  const isThinking = unclosed === true;
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // When thinking, it is never collapsed
+  const showContent = isThinking || !isCollapsed;
+
+  const handleToggleCollapse = () => {
+    if (!isThinking) {
+      setIsCollapsed((prev) => !prev);
     }
-    return content
-  }
+  };
 
   return (
-    <div className="think-tag my-2 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
-      <div className="flex items-start gap-2">
-        <div className="flex-shrink-0 w-5 h-5 mt-0.5">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-full h-full text-blue-500"
-          >
-            <path d="M9 12l2 2 4-4" />
-            <path d="M21 12c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1" />
-            <path d="M3 12c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1" />
-            <path d="M12 21c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1" />
-            <path d="M12 3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1" />
-          </svg>
+    <div
+      className={cn(
+        "my-4 rounded-lg border border-zinc-200  dark:border-zinc-800 dark:bg-zinc-900",
+        className
+      )}
+      {...props}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between px-4 py-1",
+          !isThinking && "cursor-pointer"
+        )}
+        onClick={handleToggleCollapse}
+      >
+        <div className="flex items-center gap-2">
+          {isThinking ? (
+            <Loader2 className="h-5 w-5 animate-spin " />
+          ) : (
+            <BrainCircuit className="h-5 w-5 " />
+          )}
+          <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+            {isThinking ? "think..." : "think"}
+          </span>
         </div>
-        <div className="flex-1 text-blue-800 italic text-sm leading-relaxed">
-          {formatContent(children)}
-        </div>
+        {!isThinking && (
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 text-zinc-500 transition-transform",
+              !isCollapsed && "rotate-180"
+            )}
+          />
+        )}
       </div>
+      {showContent && (
+        <div className="prose prose-sm dark:prose-invert max-w-none border-t border-zinc-200 p-4 dark:border-zinc-800">
+          {children}
+        </div>
+      )}
     </div>
-  )
+  );
 };
 
-// 自定义 rehype 插件：将 think 标签转换为 think-component
-const rehypeThink = () => {
-  return (tree: any) => {
-    visit(tree, 'element', (node, index, parent) => {
-      if (node.tagName === 'think') {
-        if (parent && typeof index === 'number') {
-          parent.children[index] = {
-            type: 'element',
-            tagName: 'think-component',
-            properties: node.properties, // 传递属性
-            children: node.children, // 传递子节点
+const rehypeMarkUnclosed = () => {
+  return (tree: any, file: any) => {
+    visit(tree, "element", (node: any) => {
+      if (node.tagName === "think") {
+        if (
+          node.position?.start?.offset !== undefined &&
+          node.position?.end?.offset !== undefined
+        ) {
+          const rawContent = file.value.slice(
+            node.position.start.offset,
+            node.position.end.offset
+          );
+
+          if (!rawContent.includes("</think>")) {
+            if (!node.properties) {
+              node.properties = {};
+            }
+            node.properties["data-unclosed"] = true;
           }
         }
       }
-      // 
-      if (node.tagName === 'message') {
-        if (parent && typeof index === 'number') {
-          parent.children[index] = {
-            type: "element",
-            tagName: "message-component",
-            properties: node.properties, // 传递属性
-            children: node.children, // 传递子节点
-          };
-        }
-      }
-    })
-  }
-}
+    });
+  };
+};
+
 
 // 修复插件：处理解析器错误地将 message 嵌套在 think 内部的问题
 const rehypeFixNesting = () => {
@@ -106,7 +123,7 @@ const rehypeFixNesting = () => {
     visit(tree, 'element', (node, index, parent) => {
       // 查找 think-component
       if (
-        node.tagName === 'think-component' &&
+        node.tagName === 'think' &&
         parent &&
         typeof index === 'number'
       ) {
@@ -117,7 +134,7 @@ const rehypeFixNesting = () => {
         const newChildren = node.children.filter((child: any) => {
           if (
             child.type === 'element' &&
-            child.tagName === 'message-component'
+            child.tagName === 'message'
           ) {
             messagesToHoist.push(child)
             messageFound = true
@@ -146,15 +163,33 @@ const MarkdownTextImpl = () => {
   return (
     <MarkdownTextPrimitive
       remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex, rehypeRaw, rehypeThink, rehypeFixNesting]}
-      remarkRehypeOptions={{
-        allowDangerousHtml: true
-      }}
+      rehypePlugins={[rehypeKatex, rehypeRaw, rehypeMarkUnclosed, rehypeFixNesting]}
       components={{
-        // @ts-ignore - 自定义组件类型
-        'message-component': MessageComponent,
-        // @ts-ignore - 自定义组件类型
-        'think-component': ThinkComponent,
+        // @ts-ignore
+        think: ({
+          node: _node,
+          className,
+          "data-unclosed": unclosed,
+          ...props
+        }: any) => (
+          <ThinkComponent
+            className={className}
+            data-unclosed={unclosed}
+            {...props}
+          />
+        ),
+        // @ts-ignore
+        message: ({ node: _node, className, ...props }) => (
+          <div
+            className={cn(
+              "my-4 p-4 dark:bg-green-950/30 bg-gray-50 rounded-lg",
+              "before:content-[''] ",
+              className
+            )}
+            {...props}
+          />
+        ),
+        //
         h1: ({ node: _node, className, ...props }) => (
           <h1
             className={cn(
