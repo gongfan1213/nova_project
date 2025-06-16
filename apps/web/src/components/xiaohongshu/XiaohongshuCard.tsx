@@ -15,7 +15,7 @@ export function XiaohongshuCard({ article, onEdit, onCopy, onDelete, copying }: 
 
   return (
     <div
-      className="bg-white rounded-xl shadow p-4 w-[340px] group relative"
+      className="bg-white rounded-[20px] shadow p-4 w-[340px] group relative"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
