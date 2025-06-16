@@ -12,37 +12,33 @@ interface CardData {
   title: string;
   icon: string;
   description: string;
-  color: string;
+  color?: string;
 }
 
-const cardConfigs: CardData[] = [
+export const userBackgroundTypeMap: CardData[] = [
   {
     type: "personalities",
     title: "账号人设定位",
     icon: "👤",
     description: "账号的核心身份标签",
-    color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
   },
   {
     type: "intentions",
     title: "账号核心目标",
     icon: "🎯",
     description: "驱动你运营账号的最主要目标是？",
-    color: "bg-green-50 border-green-200 hover:bg-green-100",
   },
   {
     type: "resources",
     title: "账号独家资源",
     icon: "📚",
     description: "运营账号的独特优势或可用资源？",
-    color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
   },
   {
     type: "accountStyles",
     title: "账号内容风格",
     icon: "✨",
     description: "账号调性和呈现偏好",
-    color: "bg-orange-50 border-orange-200 hover:bg-orange-100",
   },
 ];
 
@@ -63,7 +59,7 @@ const EditModal = ({ isOpen, onClose, type, item, onSave, isLoading = false }: E
     content: "",
   });
 
-  const cardConfig = cardConfigs.find(c => c.type === type);
+  const cardConfig = userBackgroundTypeMap.find(c => c.type === type);
   const isEditing = !!item;
 
   useEffect(() => {
@@ -190,7 +186,7 @@ const Dropdown = ({ type, items, currentItem, onAddNew, onEdit, onDelete, onSele
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const cardConfig = cardConfigs.find(c => c.type === type);
+  const cardConfig = userBackgroundTypeMap.find(c => c.type === type);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -436,7 +432,7 @@ export const UserBgBox = () => {
 
       {/* 横向卡片布局 */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        {cardConfigs.map((card) => {
+        {userBackgroundTypeMap.map((card) => {
           const itemCount = getItemCount(card.type);
           const isActive = activeCard === card.type;
           const items = getItems(card.type);
