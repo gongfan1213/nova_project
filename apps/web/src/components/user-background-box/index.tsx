@@ -444,10 +444,8 @@ export const UserBgBox = () => {
           return (
             <div
               key={card.type}
-              className={`flex flex-col
-              rounded-[20px] border-2 cursor-pointer transition-all duration-200
-              ${card.color}
-              ${isActive ? "ring-2 ring-blue-500 ring-opacity-50" : ""}
+              className={`flex flex-col rounded-lg
+              border-2 cursor-pointer transition-all duration-200
             `}
               onClick={() => setActiveCard(card.type)}
             >

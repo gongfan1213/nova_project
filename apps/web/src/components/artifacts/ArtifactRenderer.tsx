@@ -349,7 +349,6 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
               onMouseEnter={() => setIsHoveringOverArtifact(true)}
               onMouseLeave={() => setIsHoveringOverArtifact(false)}
             >
-              {console.log('渲染当前artifact内容', currentArtifactContent)}
               {currentArtifactContent.type === "text" ? (
                 <MemoTextRenderer
                   isInputVisible={isInputVisible}

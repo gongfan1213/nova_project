@@ -90,7 +90,48 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [currentThreadData, setCurrentThread] = useState<any>(undefined);
   const [metadata, setMetadata] = useState<any>(undefined);
   const [messages, setMessages] = useState<BaseMessage[]>([]);
-  const [artifact, setArtifact] = useState<ArtifactV3>();
+  const [artifact, setArtifactInternal] = useState<ArtifactV3>();
+
+  const createSafeArtifact = (artifact: ArtifactV3): ArtifactV3 => {
+    // 过滤掉 think 标签的函数
+    const removeThinkTags = (content: string): string => {
+      return content;
+      // return content.replace(/<think>[\s\S]*?<\/think>/g, '')
+    }
+
+    // 创建新的 artifact，过滤所有内容中的 think 标签
+    return {
+      ...artifact,
+      contents: artifact.contents.map(content => {
+        if (content.type === 'text') {
+          return {
+            ...content,
+            fullMarkdown: removeThinkTags(content.fullMarkdown || '')
+          }
+        } else if (content.type === 'code') {
+          return {
+            ...content,
+            code: removeThinkTags(content.code || '')
+          }
+        }
+        return content
+      })
+    }
+  }
+
+  // 包装过的 setArtifact 函数，自动过滤 think 标签
+  const setArtifact = (value: SetStateAction<ArtifactV3 | undefined>) => {
+    if (typeof value === 'function') {
+      setArtifactInternal((prev) => {
+        const newArtifact = value(prev)
+        return newArtifact ? createSafeArtifact(newArtifact) : newArtifact
+      })
+    } else {
+      setArtifactInternal(value ? createSafeArtifact(value) : value)
+    }
+  }
+
+
   const [selectedBlocks, setSelectedBlocks] = useState<TextHighlight>();
   const [isStreaming, setIsStreaming] = useState(false);
   const [updateRenderedArtifactRequired, setUpdateRenderedArtifactRequired] =
