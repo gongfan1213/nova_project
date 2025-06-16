@@ -237,11 +237,11 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
             {novaContentCards.map((card, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl shadow-md p-8 flex flex-col items-center justify-center min-h-[260px]"
+                className="bg-white rounded-2xl shadow-md p-8 flex flex-col justify-start min-h-[260px]"
                 onClick={() => handleCardClick(card.prompt)}
               >
-                <div className="text-xl font-bold text-gray-900 mb-4 text-center">{card.title}</div>
-                <p className="text-gray-600 leading-relaxed text-base flex-1 text-center">{card.desc}</p>
+                <div className="text-xl font-bold text-gray-900 mb-4">{card.title}</div>
+                <p className="text-gray-600 leading-relaxed text-base flex-1">{card.desc}</p>
               </div>
             ))}
           </div>
