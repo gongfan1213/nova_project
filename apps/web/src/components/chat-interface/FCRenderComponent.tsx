@@ -43,9 +43,13 @@ export const FCRenderComponent: React.FC<FCRenderComponentProps> = ({
   };
 
   const DefaultFCRender = () => {
-    // if (tool === "xhsSearch") {
-    //   return <ToolCallRendererXhsSearch />;
-    // }
+
+    if (isComplete && tool === "xhsSearch") {
+      return (
+        <ToolCallRendererXhsSearch startCall={startCall} endCall={endCall} />
+      );
+    }
+
     return (
       <>
         {/* 工具输入 */}
