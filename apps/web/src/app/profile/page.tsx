@@ -181,7 +181,7 @@ export default function UserPage() {
             </div>
             <div>
               <CardTitle>基本信息</CardTitle>
-              <CardDescription>管理你的个人资料</CardDescription>
+              {/* <CardDescription>管理你的个人资料</CardDescription> */}
             </div>
           </div>
           <Button
