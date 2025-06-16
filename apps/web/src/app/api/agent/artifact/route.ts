@@ -93,61 +93,84 @@ export async function POST(req: NextRequest) {
         }
 
         const decoder = new TextDecoder()
+        let buffer = '' // 添加缓冲区来处理被截断的数据
 
         async function pump(): Promise<void> {
           try {
             const { done, value } = await reader!.read()
 
             if (done) {
+              // 处理缓冲区中剩余的数据
+              if (buffer.trim()) {
+                processBuffer(buffer)
+              }
               controller.close()
               return
             }
 
             const chunk = decoder.decode(value, { stream: true })
-            const lines = chunk.split('\n')
+            buffer += chunk // 将新数据添加到缓冲区
 
+            // 按行分割并处理完整的行
+            const lines = buffer.split('\n')
+            
+            // 保留最后一行（可能不完整）在缓冲区中
+            buffer = lines.pop() || ''
+
+            // 处理完整的行
             for (const line of lines) {
-              const trimmedLine = line.trim()
-
-              if (trimmedLine && trimmedLine.startsWith('data: ')) {
-                try {
-                  const dataStr = trimmedLine.slice(6)
-
-                  // 处理特殊情况：data: [DONE]
-                  if (dataStr === '[DONE]') {
-                    controller.enqueue(
-                      new TextEncoder().encode('data: [DONE]\n\n')
-                    )
-                    continue
-                  }
-
-                  const jsonData: AgentResponse = JSON.parse(dataStr)
-
-                  // 转发所有数据，保持原始格式
-                  const encodedData = new TextEncoder().encode(
-                    `data: ${JSON.stringify(jsonData)}\n\n`
-                  )
-                  controller.enqueue(encodedData)
-
-                } catch (parseError) {
-                  console.warn('Failed to parse SSE data:', parseError, 'Line:', trimmedLine)
-                  // 对于无法解析的数据，直接转发
-                  controller.enqueue(
-                    new TextEncoder().encode(`${line}\n`)
-                  )
-                }
-              } else if (trimmedLine.startsWith('event: ') || trimmedLine.startsWith('id: ')) {
-                // 转发其他 SSE 字段
-                controller.enqueue(
-                  new TextEncoder().encode(`${line}\n`)
-                )
-              }
+              processLine(line)
             }
 
             return pump()
           } catch (error) {
             console.error('Error in stream pump:', error)
             controller.error(error)
+          }
+        }
+
+        function processBuffer(remainingBuffer: string) {
+          const lines = remainingBuffer.split('\n')
+          for (const line of lines) {
+            processLine(line)
+          }
+        }
+
+        function processLine(line: string) {
+          const trimmedLine = line.trim()
+
+          if (trimmedLine && trimmedLine.startsWith('data: ')) {
+            try {
+              const dataStr = trimmedLine.slice(6)
+
+              // 处理特殊情况：data: [DONE]
+              if (dataStr === '[DONE]') {
+                controller.enqueue(
+                  new TextEncoder().encode('data: [DONE]\n\n')
+                )
+                return
+              }
+
+              const jsonData: AgentResponse = JSON.parse(dataStr)
+
+              // 转发所有数据，保持原始格式
+              const encodedData = new TextEncoder().encode(
+                `data: ${JSON.stringify(jsonData)}\n\n`
+              )
+              controller.enqueue(encodedData)
+
+            } catch (parseError) {
+              console.warn('Failed to parse SSE data:', parseError, 'Line:', trimmedLine)
+              // 对于无法解析的数据，直接转发
+              controller.enqueue(
+                new TextEncoder().encode(`${line}\n`)
+              )
+            }
+          } else if (trimmedLine.startsWith('event: ') || trimmedLine.startsWith('id: ')) {
+            // 转发其他 SSE 字段
+            controller.enqueue(
+              new TextEncoder().encode(`${line}\n`)
+            )
           }
         }
 
