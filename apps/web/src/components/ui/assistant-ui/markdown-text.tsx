@@ -7,9 +7,18 @@ import {
 } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
 import remarkMath from "remark-math";
-import { FC, memo, useState } from "react";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { FC, memo, useState, type HTMLAttributes } from "react";
+import {
+  BrainCircuit,
+  CheckIcon,
+  ChevronDown,
+  CopyIcon,
+  Loader2,
+} from "lucide-react";
+// @ts-ignore
+import { visit } from "unist-util-visit";
 
 import { TooltipIconButton } from "@/components/ui/assistant-ui/tooltip-icon-button";
 import { SyntaxHighlighter } from "@/components/ui/assistant-ui/syntax-highlighter";
@@ -17,28 +26,121 @@ import { cn } from "@/lib/utils";
 
 import "katex/dist/katex.min.css";
 
+interface ThinkComponentProps extends HTMLAttributes<HTMLDivElement> {
+  "data-unclosed"?: boolean;
+}
+
+const ThinkComponent = ({
+  className,
+  "data-unclosed": unclosed,
+  children,
+  ...props
+}: ThinkComponentProps) => {
+  const isThinking = unclosed === true;
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // When thinking, it is never collapsed
+  const showContent = isThinking || !isCollapsed;
+
+  const handleToggleCollapse = () => {
+    if (!isThinking) {
+      setIsCollapsed((prev) => !prev);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        "my-4 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900",
+        className
+      )}
+      {...props}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between p-4",
+          !isThinking && "cursor-pointer"
+        )}
+        onClick={handleToggleCollapse}
+      >
+        <div className="flex items-center gap-2">
+          {isThinking ? (
+            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+          ) : (
+            <BrainCircuit className="h-5 w-5 text-blue-500" />
+          )}
+          <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+            {isThinking ? "think..." : "think"}
+          </span>
+        </div>
+        {!isThinking && (
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 text-zinc-500 transition-transform",
+              !isCollapsed && "rotate-180"
+            )}
+          />
+        )}
+      </div>
+      {showContent && (
+        <div className="prose prose-sm dark:prose-invert max-w-none border-t border-zinc-200 p-4 dark:border-zinc-800">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const rehypeMarkUnclosed = () => {
+  return (tree: any, file: any) => {
+    visit(tree, "element", (node: any) => {
+      if (node.tagName === "think") {
+        if (
+          node.position?.start?.offset !== undefined &&
+          node.position?.end?.offset !== undefined
+        ) {
+          const rawContent = file.value.slice(
+            node.position.start.offset,
+            node.position.end.offset
+          );
+
+          if (!rawContent.includes("</think>")) {
+            if (!node.properties) {
+              node.properties = {};
+            }
+            node.properties["data-unclosed"] = true;
+          }
+        }
+      }
+    });
+  };
+};
+
 const MarkdownTextImpl = () => {
   return (
     <MarkdownTextPrimitive
       remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex]}
+      rehypePlugins={[rehypeKatex, rehypeRaw, rehypeMarkUnclosed]}
       components={{
-        // 能加特殊标签吗？
-        think: ({ node: _node, className, ...props }) => (
-          <div
-            className={cn(
-              "my-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 p-4 dark:bg-blue-950/30",
-              "before:content-['💭_思考:'] before:text-blue-600 before:font-semibold before:block before:mb-2 dark:before:text-blue-400",
-              className
-            )}
+        // @ts-ignore
+        think: ({
+          node: _node,
+          className,
+          "data-unclosed": unclosed,
+          ...props
+        }: any) => (
+          <ThinkComponent
+            className={className}
+            data-unclosed={unclosed}
             {...props}
           />
         ),
+        // @ts-ignore
         message: ({ node: _node, className, ...props }) => (
           <div
             className={cn(
-              "my-4 rounded-lg border-l-4 border-green-500 bg-green-50 p-4 dark:bg-green-950/30",
-              "before:content-[''] before:text-green-600 before:font-semibold before:block before:mb-2 dark:before:text-green-400",
+              "my-4 p-4 dark:bg-green-950/30 bg-gray-50 rounded-lg",
+              "before:content-[''] ",
               className
             )}
             {...props}
