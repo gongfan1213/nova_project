@@ -291,7 +291,7 @@ const MyProjects = () => {
                       {project.title}
                     </CardTitle>
                   )}
-                  <Dialog open={statusDialogOpen === project.id} onOpenChange={open => setStatusDialogOpen(open ? project.id : null)}>
+                  {/* <Dialog open={statusDialogOpen === project.id} onOpenChange={open => setStatusDialogOpen(open ? project.id : null)}>
                     <DialogTrigger asChild>
                       <Badge
                         className={
@@ -324,7 +324,7 @@ const MyProjects = () => {
                         >已完成</button>
                       </div>
                     </DialogContent>
-                  </Dialog>
+                  </Dialog> */}
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
