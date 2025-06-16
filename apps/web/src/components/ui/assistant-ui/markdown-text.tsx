@@ -51,23 +51,23 @@ const ThinkComponent = ({
   return (
     <div
       className={cn(
-        "my-4 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900",
+        "my-4 rounded-lg border border-zinc-200  dark:border-zinc-800 dark:bg-zinc-900",
         className
       )}
       {...props}
     >
       <div
         className={cn(
-          "flex items-center justify-between p-4",
+          "flex items-center justify-between px-4 py-1",
           !isThinking && "cursor-pointer"
         )}
         onClick={handleToggleCollapse}
       >
         <div className="flex items-center gap-2">
           {isThinking ? (
-            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+            <Loader2 className="h-5 w-5 animate-spin " />
           ) : (
-            <BrainCircuit className="h-5 w-5 text-blue-500" />
+            <BrainCircuit className="h-5 w-5 " />
           )}
           <span className="font-semibold text-zinc-700 dark:text-zinc-300">
             {isThinking ? "think..." : "think"}
@@ -116,11 +116,54 @@ const rehypeMarkUnclosed = () => {
   };
 };
 
+
+// 修复插件：处理解析器错误地将 message 嵌套在 think 内部的问题
+const rehypeFixNesting = () => {
+  return (tree: any) => {
+    visit(tree, 'element', (node, index, parent) => {
+      // 查找 think-component
+      if (
+        node.tagName === 'think' &&
+        parent &&
+        typeof index === 'number'
+      ) {
+        const messagesToHoist: any[] = []
+        let messageFound = false
+
+        // 过滤出 message-component 并将其从 think-component 的子节点中移除
+        const newChildren = node.children.filter((child: any) => {
+          if (
+            child.type === 'element' &&
+            child.tagName === 'message'
+          ) {
+            messagesToHoist.push(child)
+            messageFound = true
+            return false // 从 children 中移除
+          }
+          // 如果已经找到了 message，并且当前节点是空的文本节点（通常是换行符），也一并移除
+          if (messageFound && child.type === 'text' && child.value.trim() === '') {
+            return false
+          }
+          return true
+        })
+
+        // 如果找到了需要提升的 message-component
+        if (messagesToHoist.length > 0) {
+          node.children = newChildren
+
+          // 将 message-component 插入到 parent 的子节点中，使其成为 think-component 的兄弟节点
+          parent.children.splice(index + 1, 0, ...messagesToHoist)
+        }
+      }
+    })
+  }
+}
+
 const MarkdownTextImpl = () => {
   return (
     <MarkdownTextPrimitive
       remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex, rehypeRaw, rehypeMarkUnclosed]}
+      rehypePlugins={[rehypeKatex, rehypeRaw, rehypeMarkUnclosed, rehypeFixNesting]}
       components={{
         // @ts-ignore
         think: ({
