@@ -262,16 +262,18 @@ const MyProjects = () => {
               <NewTagDialog onTagCreated={fetchTags} />
             </div>
             <div className="flex gap-3">
-              <NewProjectDialog onProjectCreated={fetchProjects} availableTags={tags} />
+              <div className="bg-white shadow rounded-[40px] border border-gray-100 flex flex-col items-center justify-center w-[340px] h-[320px] cursor-pointer transition-all duration-200 hover:shadow-lg">
+                <NewProjectDialog onProjectCreated={fetchProjects} availableTags={tags} />
+              </div>
               <ProjectManageDialog projects={projects} onProjectsChanged={fetchProjects} />
             </div> */}
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {filteredProjects.map((project) => (
             <Card
               key={project.id}
-              className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group"
+              className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group w-full max-w-[300px] min-w-[220px] mx-auto rounded-3xl"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between mb-3">
