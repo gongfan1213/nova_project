@@ -293,7 +293,7 @@ const MyProjects = () => {
                   )}
                   {/* <Dialog open={statusDialogOpen === project.id} onOpenChange={open => setStatusDialogOpen(open ? project.id : null)}>
                     <DialogTrigger asChild>
-                      {/* <Badge
+                      <Badge
                         className={
                           (project.status === '已完成'
                             ? 'bg-green-100 text-green-800'
@@ -303,7 +303,7 @@ const MyProjects = () => {
                         }
                       >
                         {project.status}
-                      </Badge> */}
+                      </Badge>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
