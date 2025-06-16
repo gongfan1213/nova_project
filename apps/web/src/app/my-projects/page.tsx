@@ -273,7 +273,7 @@ const MyProjects = () => {
           {filteredProjects.map((project) => (
             <Card
               key={project.id}
-              className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group w-full max-w-[300px] min-w-[220px] mx-auto rounded-3xl"
+              className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group w-full max-w-[300px] min-w-[220px] mx-auto rounded-3xl h-[260px] flex flex-col"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between mb-3">
@@ -286,14 +286,14 @@ const MyProjects = () => {
                     />
                   ) : (
                     <CardTitle
-                      className="text-base font-semibold text-gray-900 transition-colors flex-1 group-hover:text-red-600"
+                      className="text-base font-semibold text-gray-900 transition-colors flex-1 group-hover:text-red-600 line-clamp-2 break-all min-h-[48px] flex items-start"
                     >
                       {project.title}
                     </CardTitle>
                   )}
                   <Dialog open={statusDialogOpen === project.id} onOpenChange={open => setStatusDialogOpen(open ? project.id : null)}>
                     <DialogTrigger asChild>
-                      <Badge
+                      {/* <Badge
                         className={
                           (project.status === '已完成'
                             ? 'bg-green-100 text-green-800'
@@ -303,7 +303,7 @@ const MyProjects = () => {
                         }
                       >
                         {project.status}
-                      </Badge>
+                      </Badge> */}
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
@@ -327,11 +327,11 @@ const MyProjects = () => {
                   </Dialog>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-gray-600 mb-4 leading-relaxed line-clamp-3 min-h-[64px] max-h-[72px] overflow-hidden">
+              <CardContent className="pt-0 flex flex-col h-full">
+                <p className="text-gray-600 mb-4 leading-relaxed min-h-[72px] max-h-[72px] overflow-hidden line-clamp-3 break-all flex items-start">
                   {project.description}
                 </p>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 mt-auto">
                   <div className="flex items-center justify-between w-full ">
                     <span className="text-xs text-gray-500 group-hover:hidden">
                       最后修改: {project.updated_at ? project.updated_at.slice(0, 10) : ""}

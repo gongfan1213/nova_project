@@ -1,9 +1,10 @@
+import React from 'react'
 import { ProgrammingLanguageOptions } from "@opencanvas/shared/types";
-import { ThreadPrimitive, useThreadRuntime } from "@assistant-ui/react";
+import { ThreadPrimitive, useThreadRuntime, useComposerRuntime, useComposer } from "@assistant-ui/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FC, useMemo } from "react";
 import { TighterText } from "../ui/header";
-import { NotebookPen } from "lucide-react";
+import { NotebookPen, ChevronUp } from "lucide-react";
 import { ProgrammingLanguagesDropdown } from "../ui/programming-lang-dropdown";
 import { Button } from "../ui/button";
 import { ChineseFeatureCards } from "./ChineseFeatureCards";
@@ -149,17 +150,17 @@ const contentSuggestions = [
 const novaContentCards = [
   {
     title: '爆款泰国小吃种草文案',
-    desc: 'AI生成的泰国小吃种草视频文案，将深挖泰国街头巷尾的地道美味，结合专业美食知识与真实探店体验，精心撰写泰国小吃推荐文案，用生动笔触描绘每一口的独特口感。从夜市街边摊到米其林餐厅，无论是解馋小食还是正餐搭配，都能带你沉浸式感受东南亚风味的独特魅力。',
+    desc: 'AI 匠心打造泰国小吃种草文案！融合专业美食知识与真实探店体验，生动描绘特色口感，带你穿梭夜市与餐厅，沉浸式领略东南亚风味魅力！',
     prompt: '请模拟美食账号，写一条描述泰国小吃的爆款文案',
   },
   {
     title: '家庭创伤主题的结尾文案',
-    desc: '每一段关于原生家庭的倾诉，都是治愈的开始。这里AI将用心理学视角解析成长创伤，融入无数真实故事与个体感悟，用温暖且有力量的文字，带你直面内心深处的隐痛。从自我接纳到情感疗愈，所生成文案的每一个细节都饱含关怀与理解。',
+    desc: 'AI 以心理学视角剖析原生家庭创伤，融入真实故事与感悟，用温暖文字带你直面隐痛。每个细节满含关怀，开启自我疗愈之旅！',
     prompt: '请生成一组"原生家庭痛苦"话题的结尾文案，要有代入感，能引导点赞/收藏',
   },
   {
     title: '找到电影行业热点选题',
-    desc: 'AI将深度追踪电影行业最新热点，洞察爆款电影背后的故事逻辑与创作巧思，，打造极具小红书特色的种草内容。每一个选题都精准聚焦热点趋势，让读者仿佛置身电影世界。',
+    desc: 'AI将精准聚焦电影行业最新热点，详细拆解背后逻辑，捕捉创作巧思，发现最佳选题，帮助你打造超吸睛的小红书内容！',
     prompt: '帮我从电影行业热点中挖掘一个符合小红书平台的内容选题并生成五篇文案',
   },
   {
@@ -184,68 +185,68 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
 
   return (
     <ThreadPrimitive.Empty>
-      <div className="flex items-center justify-center mt-16 w-screen">
-        <div className="text-center max-w-3xl w-full">
-          {/* <Avatar className="mx-auto">
-            <AvatarImage src="/lc_logo.jpg" alt="LangChain Logo" />
-            <AvatarFallback>LC</AvatarFallback>
-          </Avatar> */}
-          <TighterText className="mt-4 text-5xl font-bold">
-            Nova
-          </TighterText>
-          <div className="mt-8 w-full">
-            <QuickStartButtons
-              composer={props.composer}
-              handleQuickStart={props.handleQuickStart}
-              searchEnabled={props.searchEnabled}
-            />
-            {/* 内容建议卡片区，插入在输入框下方、用Nova创作精彩内容上方 */}
-            <TooltipProvider>
-              <div className="mb-4 flex flex-col items-center w-full">
+      <div className="min-h-screen bg-[#F7F8FA] flex flex-col items-center w-full py-20">
+        <div className="w-full mx-auto flex flex-col items-center">
+          {/* 顶部标题区 */}
+          <div className="w-full flex flex-col items-center mb-16">
+            <TighterText className="text-7xl font-extrabold text-gray-900 mb-6 tracking-tight">Nova</TighterText>
+            <div className="text-2xl text-gray-500 font-normal mb-4 leading-relaxed">将你的想法转化为精彩内容 - 从这里开始</div>
+          </div>
+
+          {/* 输入框区域（放大） */}
+          <div className="w-full flex flex-col items-center mb-12">
+            <div className="w-full flex flex-row items-center justify-center gap-4 mb-8">
+              <div className="flex-1 max-w-5xl">
+                {/* 这里插入输入框，放大样式 */}
+                <div className="w-full">
+                  {React.isValidElement(props.composer) ?
+                    React.cloneElement(props.composer as React.ReactElement, {
+                      className: `${(props.composer as any)?.props?.className || ''} h-32 text-3xl px-12 py-10 rounded-3xl shadow-md bg-white border border-gray-200 focus:ring-2 focus:ring-primary-200 transition-all w-full max-w-5xl mx-auto` // 更大输入框
+                    }) : props.composer}
+                </div>
+              </div>
+            </div>
+            {/* 内容建议卡片区块 */}
+            <div className="w-full flex flex-col items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-5xl">
                 {contentSuggestions.map((row, i) => (
-                  <div key={i} className="flex gap-4 mb-2">
+                  <React.Fragment key={i}>
                     {row.map((text, j) => (
-                      <Tooltip key={j} delayDuration={300}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="bg-gray-100 rounded-xl px-4 py-2 text-[#454C53] max-w-xs whitespace-nowrap overflow-hidden text-ellipsis text-base flex items-center cursor-pointer hover:bg-gray-200 transition-colors"
-                            style={{ minWidth: 0 }}
-                          >
-                            {text}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs break-words whitespace-pre-line">
-                          {text}
-                        </TooltipContent>
-                      </Tooltip>
+                      <div
+                        key={j}
+                        className="bg-gray-50 rounded-xl px-4 py-3 text-[#454C53] text-base flex items-center cursor-pointer hover:bg-gray-100 transition shadow-sm min-w-0"
+                        style={{ justifyContent: 'space-between' }}
+                        onClick={() => {
+                          handleCardClick(text)
+                        }}
+                      >
+                        <span className="flex-1 text-ellipsis overflow-hidden whitespace-nowrap">{text}</span>
+                        <ChevronUp size={28} strokeWidth={2.5} className="ml-6 text-gray-400" />
+                      </div>
                     ))}
-                  </div>
+                  </React.Fragment>
                 ))}
               </div>
-            </TooltipProvider>
-            <TighterText className="mt-16 text-2xl font-bold">
+            </div>
+          </div>
+          <TighterText className="mt-16 mb-8 text-3xl font-bold">
               用Nova创作精彩内容
             </TighterText>
-           
+          {/* Nova功能卡片区块 */}
+          <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8 mt-4 px-4">
+            {novaContentCards.map((card, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-2xl shadow-md p-8 flex flex-col items-center justify-center min-h-[260px]"
+                onClick={() => handleCardClick(card.prompt)}
+              >
+                <div className="text-xl font-bold text-gray-900 mb-4 text-center">{card.title}</div>
+                <p className="text-gray-600 leading-relaxed text-base flex-1 text-center">{card.desc}</p>
+              </div>
+            ))}
           </div>
-          {/* 中文卡片区块 */}
-          
         </div>
       </div>
-       {/* 新内容卡片区块，样式与ChineseFeatureCards一致 */}
-       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6 mt-8 px-4">
-              {novaContentCards.map((card, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white rounded-[20px] shadow-md p-6 cursor-pointer hover:shadow-lg transition"
-                  onClick={() => handleCardClick(card.prompt)}
-                >
-                  <div className="text-lg font-bold text-gray-900 mb-4">{card.title}</div>
-                  <p className="text-gray-600 leading-relaxed">{card.desc}</p>
-                </div>
-              ))}
-            </div>
-      <ChineseFeatureCards onCardClick={handleCardClick} />
     </ThreadPrimitive.Empty>
   );
 };
