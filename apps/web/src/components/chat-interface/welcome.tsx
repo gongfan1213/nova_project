@@ -7,6 +7,7 @@ import { NotebookPen } from "lucide-react";
 import { ProgrammingLanguagesDropdown } from "../ui/programming-lang-dropdown";
 import { Button } from "../ui/button";
 import { ChineseFeatureCards } from "./ChineseFeatureCards";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 const QUICK_START_PROMPTS_SEARCH = [
   "Write a market analysis of AI chip manufacturers in 2025",
@@ -132,6 +133,18 @@ interface ThreadWelcomeProps {
   searchEnabled: boolean;
 }
 
+// 内容建议卡片数据
+const contentSuggestions = [
+  [
+    '拆解小水水最新爆款视频的拍摄逻辑和分镜',
+    '给我一个"巴厘岛旅行情侣穿搭"主题的小红书vlog脚本',
+  ],
+  [
+    '现在有一款产品是带有白松香和广藿香香调的氨基酸沐浴露，主打"闻起来像高级香水"。请给我一个该产品小红书种草帖子的封面图拍摄建议',
+    '如何快速起号？给我一个爆款Vlog拍摄脚本',
+  ],
+];
+
 export const ThreadWelcome: FC<ThreadWelcomeProps> = (
   props: ThreadWelcomeProps
 ) => {
@@ -162,10 +175,33 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
               handleQuickStart={props.handleQuickStart}
               searchEnabled={props.searchEnabled}
             />
-            <TighterText className="mt-4 text-2xl font-bold">
-            用Nova创作精彩内容
-          </TighterText>
-            
+            {/* 内容建议卡片区，插入在输入框下方、用Nova创作精彩内容上方 */}
+            <TooltipProvider>
+              <div className="mb-4 flex flex-col items-center w-full">
+                {contentSuggestions.map((row, i) => (
+                  <div key={i} className="flex gap-4 mb-2">
+                    {row.map((text, j) => (
+                      <Tooltip key={j} delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="bg-gray-100 rounded-xl px-4 py-2 text-[#454C53] max-w-xs whitespace-nowrap overflow-hidden text-ellipsis text-base flex items-center cursor-pointer hover:bg-gray-200 transition-colors"
+                            style={{ minWidth: 0 }}
+                          >
+                            {text}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs break-words whitespace-pre-line">
+                          {text}
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </TooltipProvider>
+            <TighterText className="mt-16 text-2xl font-bold">
+              用Nova创作精彩内容
+            </TighterText>
           </div>
           {/* 中文卡片区块 */}
           

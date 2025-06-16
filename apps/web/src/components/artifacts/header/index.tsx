@@ -12,6 +12,7 @@ import { TextRenderer } from "../TextRenderer";
 import { Card, CardContent } from "@/components/ui/card";
 import { X } from 'lucide-react';
 import { useGraphContext } from '@/contexts/GraphContext';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface ArtifactHeaderProps {
   isBackwardsDisabled: boolean;
@@ -107,9 +108,13 @@ export function ArtifactHeader(props: ArtifactHeaderProps) {
     );
     if (found) {
       currentCardContent = {
-        id: found.id || '',
         title: found.title,
-        content: found.fullMarkdown || found.code || '',
+        content:
+          found.type === 'text'
+            ? found.fullMarkdown || ''
+            : found.type === 'code'
+            ? found.code || ''
+            : '',
       };
     }
   }
