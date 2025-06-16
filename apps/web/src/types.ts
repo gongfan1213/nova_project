@@ -100,3 +100,16 @@ export interface BackgroundData {
 }
 
 export type BgDataType = 'personalities' | 'intentions' | 'resources' | 'accountStyles'
+
+// 用户配置相关类型定义
+export interface UserProfile {
+  id: string | null
+  user_id: string
+  display_name?: string
+  bio?: string
+  avatar_url?: string
+  settings: Record<string, any>
+  preferences: Record<string, any>
+  created_at: string | null
+  updated_at: string | null
+}

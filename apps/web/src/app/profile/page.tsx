@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUserContext } from "@/contexts/UserContext";
 import { useBgData } from "@/hooks/useBgData";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   Card,
   CardContent,
@@ -39,11 +40,18 @@ export default function UserPage() {
     deleteItem,
     refreshUserBackground,
   } = useBgData();
+  const {
+    profile,
+    fetchProfile,
+    saveProfile,
+    loading: profileLoading,
+  } = useUserProfile();
 
   // 用户基本信息编辑状态
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    name: user?.user_metadata?.name || user?.user_metadata?.full_name || "",
+    display_name: profile?.display_name || user?.user_metadata?.name || user?.user_metadata?.full_name || "",
+    bio: profile?.bio || "",
     email: user?.email || "",
   });
 
@@ -61,22 +69,31 @@ export default function UserPage() {
   // 组件挂载时加载数据
   useEffect(() => {
     refreshUserBackground();
-  }, [refreshUserBackground]);
+    fetchProfile();
+  }, [refreshUserBackground, fetchProfile]);
 
-  // 更新用户信息表单当用户数据变化时
+  // 更新用户信息表单当用户数据或配置变化时
   useEffect(() => {
     if (user) {
       setProfileForm({
-        name: user.user_metadata?.name || user.user_metadata?.full_name || "",
+        display_name: profile?.display_name || user.user_metadata?.name || user.user_metadata?.full_name || "",
+        bio: profile?.bio || "",
         email: user.email || "",
       });
     }
-  }, [user]);
+  }, [user, profile]);
 
-  const handleSaveProfile = () => {
-    // 这里应该调用API更新用户信息
-    // 暂时只更新本地状态
-    setIsEditingProfile(false);
+  const handleSaveProfile = async () => {
+    try {
+      await saveProfile({
+        display_name: profileForm.display_name,
+        bio: profileForm.bio,
+      });
+      setIsEditingProfile(false);
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      // 可以在这里添加错误提示
+    }
   };
 
   const handleEditItem = (type: BgDataType, item: BgDataItem) => {
@@ -139,19 +156,20 @@ export default function UserPage() {
   };
 
   const getTypeConfig = (type: BgDataType) => {
-    return userBackgroundTypeMap.find((item) => item.type === type) || {
-      title: "",
-      description: "",
-      icon: "",
-    };
+    return (
+      userBackgroundTypeMap.find((item) => item.type === type) || {
+        title: "",
+        description: "",
+        icon: "",
+      }
+    );
   };
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       {/* 页面标题 */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">用户设置</h1>
-        <p className="text-gray-600">管理你的个人信息和AI助手人设配置</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
       </div>
 
       {/* 基本信息卡片 */}
@@ -183,14 +201,25 @@ export default function UserPage() {
           {isEditingProfile ? (
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">用户名</Label>
+                <Label htmlFor="display_name">用户名</Label>
                 <Input
-                  id="name"
-                  value={profileForm.name}
+                  id="display_name"
+                  value={profileForm.display_name}
                   onChange={(e) =>
-                    setProfileForm({ ...profileForm, name: e.target.value })
+                    setProfileForm({ ...profileForm, display_name: e.target.value })
                   }
                   placeholder="请输入用户名"
+                />
+              </div>
+              <div>
+                <Label htmlFor="bio">个人简介</Label>
+                <Input
+                  id="bio"
+                  value={profileForm.bio}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, bio: e.target.value })
+                  }
+                  placeholder="请输入个人简介（可选）"
                 />
               </div>
               <div>
@@ -208,9 +237,13 @@ export default function UserPage() {
                 <p className="text-xs text-gray-500 mt-1">邮箱地址不可修改</p>
               </div>
               <div className="flex space-x-2 pt-2">
-                <Button onClick={handleSaveProfile} size="sm">
+                <Button 
+                  onClick={handleSaveProfile} 
+                  size="sm"
+                  disabled={profileLoading}
+                >
                   <SaveIcon className="h-4 w-4 mr-2" />
-                  保存
+                  {profileLoading ? '保存中...' : '保存'}
                 </Button>
                 <Button
                   variant="outline"
@@ -226,10 +259,15 @@ export default function UserPage() {
               <div>
                 <Label className="text-sm text-gray-500">用户名</Label>
                 <p className="text-gray-900">
-                  {user?.user_metadata?.name ||
+                  {profile?.display_name ||
+                    user?.user_metadata?.name ||
                     user?.user_metadata?.full_name ||
                     "未设置"}
                 </p>
+              </div>
+              <div>
+                <Label className="text-sm text-gray-500">个人简介</Label>
+                <p className="text-gray-900">{profile?.bio || "未设置"}</p>
               </div>
               <div>
                 <Label className="text-sm text-gray-500">邮箱</Label>

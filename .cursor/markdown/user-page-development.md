@@ -76,10 +76,41 @@ apps/web/src/app/user/page.tsx
 }
 ```
 
+## 数据库集成
+
+### 用户配置表 (user_profiles)
+创建了专门的用户配置表来存储扩展的用户信息：
+
+```sql
+CREATE TABLE user_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  bio TEXT,
+  avatar_url TEXT,
+  settings JSONB DEFAULT '{}'::jsonb,
+  preferences JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_user_profile UNIQUE (user_id)
+);
+```
+
+### API 接口
+- `GET /api/user-profile` - 获取用户配置
+- `POST /api/user-profile` - 创建或更新用户配置
+
+### Hook (`useUserProfile`)
+- `fetchProfile()` - 获取用户配置
+- `saveProfile(data)` - 保存用户配置
+- 加载状态和错误处理
+
 ## TODO
 
 ### 待完成功能
-- [ ] 实现用户基本信息的实际保存API
+- [x] 实现用户基本信息的实际保存API
+- [x] 创建用户配置数据库表
+- [x] 集成用户配置API
 - [ ] 添加头像上传功能
 - [ ] 添加密码修改功能
 - [ ] 添加账户删除功能
