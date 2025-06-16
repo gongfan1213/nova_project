@@ -54,7 +54,7 @@ export function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-0 sticky top-0 z-30">
-      <div className="flex items-center justify-between max-w-7xl mx-auto w-full h-16">
+      <div className="flex items-center justify-between mx-auto w-full h-16">
         {/* 左侧对话历史图标 */}
         <div className="flex items-center">
           <ThreadHistory switchSelectedThreadCallback={() => {}} />
