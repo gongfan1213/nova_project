@@ -189,8 +189,24 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
         <div className="w-full mx-auto flex flex-col items-center">
           {/* 顶部标题区 */}
           <div className="w-full flex flex-col items-center mb-16">
-            <TighterText className="text-7xl font-extrabold text-gray-900 mb-6 tracking-tight">Nova</TighterText>
-            <div className="text-2xl text-gray-500 font-normal mb-4 leading-relaxed">将你的想法转化为精彩内容 - 从这里开始</div>
+            <a
+              className="text-7xl font-extrabold text-gray-900 mb-6 tracking-tight"
+              style={{
+                backgroundClip: "text",
+                backgroundImage:
+                  "linear-gradient(to right, #8B5CF6, #4F6BF2, #D946EF)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                fontWeight: "800",
+                lineHeight: "1",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Nova
+            </a>
+            <div className="text-2xl text-gray-500 font-normal mb-4 leading-relaxed">
+              将你的想法转化为精彩内容 - 从这里开始
+            </div>
           </div>
 
           {/* 输入框区域（放大） */}
@@ -199,10 +215,11 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
               <div className="flex-1 max-w-5xl">
                 {/* 这里插入输入框，放大样式 */}
                 <div className="w-full">
-                  {React.isValidElement(props.composer) ?
-                    React.cloneElement(props.composer as React.ReactElement, {
-                      className: `${(props.composer as any)?.props?.className || ''} h-32 text-3xl px-12 py-10 rounded-3xl shadow-md bg-white border border-gray-200 focus:ring-2 focus:ring-primary-200 transition-all w-full max-w-5xl mx-auto` // 更大输入框
-                    }) : props.composer}
+                  {React.isValidElement(props.composer)
+                    ? React.cloneElement(props.composer as React.ReactElement, {
+                        className: `${(props.composer as any)?.props?.className || ""} h-32 text-3xl px-12 py-10 rounded-3xl shadow-md bg-white border border-gray-200 focus:ring-2 focus:ring-primary-200 transition-all w-full max-w-5xl mx-auto`, // 更大输入框
+                      })
+                    : props.composer}
                 </div>
               </div>
             </div>
@@ -215,13 +232,19 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
                       <div
                         key={j}
                         className="bg-gray-50 rounded-xl px-4 py-3 text-[#454C53] text-base flex items-center cursor-pointer hover:bg-gray-100 transition shadow-sm min-w-0"
-                        style={{ justifyContent: 'space-between' }}
+                        style={{ justifyContent: "space-between" }}
                         onClick={() => {
-                          handleCardClick(text)
+                          handleCardClick(text);
                         }}
                       >
-                        <span className="flex-1 text-ellipsis overflow-hidden whitespace-nowrap">{text}</span>
-                        <ChevronUp size={28} strokeWidth={2.5} className="ml-6 text-gray-400" />
+                        <span className="flex-1 text-ellipsis overflow-hidden whitespace-nowrap">
+                          {text}
+                        </span>
+                        <ChevronUp
+                          size={28}
+                          strokeWidth={2.5}
+                          className="ml-6 text-gray-400"
+                        />
                       </div>
                     ))}
                   </React.Fragment>
@@ -230,8 +253,8 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
             </div>
           </div>
           <TighterText className="mt-16 mb-8 text-3xl font-bold">
-              用Nova创作精彩内容
-            </TighterText>
+            用Nova创作精彩内容
+          </TighterText>
           {/* Nova功能卡片区块 */}
           <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8 mt-4 px-4">
             {novaContentCards.map((card, idx) => (
@@ -240,8 +263,12 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
                 className="bg-white rounded-2xl shadow-md p-8 flex flex-col justify-start min-h-[260px]"
                 onClick={() => handleCardClick(card.prompt)}
               >
-                <div className="text-xl font-bold text-gray-900 mb-4">{card.title}</div>
-                <p className="text-gray-600 leading-relaxed text-base flex-1">{card.desc}</p>
+                <div className="text-xl font-bold text-gray-900 mb-4">
+                  {card.title}
+                </div>
+                <p className="text-gray-600 leading-relaxed text-base flex-1">
+                  {card.desc}
+                </p>
               </div>
             ))}
           </div>

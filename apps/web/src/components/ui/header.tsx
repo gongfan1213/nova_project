@@ -57,8 +57,27 @@ export function Header() {
       <div className="flex items-center justify-between mx-auto w-full h-16">
         {/* 左侧对话历史图标 */}
         <div className="flex items-center">
-          <ThreadHistory switchSelectedThreadCallback={() => {}} />
-          <TighterText className="text-xl font-bold">Nova</TighterText>
+          <div className="hidden">
+            <ThreadHistory switchSelectedThreadCallback={() => {}} />
+          </div>
+          <a className="text-gray-700 hover:text-gray-900" href="/">
+            <a
+              style={{
+                backgroundClip: "text",
+                backgroundImage:
+                  "linear-gradient(to right, #8B5CF6, #4F6BF2, #D946EF)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                fontWeight: "bold",
+                fontSize: "24px",
+                lineHeight: "1",
+                letterSpacing: "0.05em",
+              }}
+              className=""
+            >
+              Nova
+            </a>
+          </a>
         </div>
         {/* 中间导航 */}
         <nav className="flex items-center space-x-8 flex-1 justify-center">
@@ -106,15 +125,17 @@ export function Header() {
                 variant="ghost"
                 className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center ml-2 p-0 hover:bg-red-600 transition-colors"
               >
-                <TighterText className="text-xl font-bold text-white">N</TighterText>
+                <TighterText className="text-xl font-bold text-white">
+                  N
+                </TighterText>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <div className="px-2 py-1.5 text-sm text-gray-500 truncate">
-                {user?.email || 'Guest User'}
+                {user?.email || "Guest User"}
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={handleProfileClick}
                 className="cursor-pointer"
               >
@@ -122,7 +143,7 @@ export function Header() {
                 Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={handleLogout}
                 className="cursor-pointer text-red-600 focus:text-red-600"
               >
