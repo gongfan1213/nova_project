@@ -501,6 +501,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                 }
               } catch (e) {
                 // 忽略解析错误
+                console.error("JSON parse error in streamRewriteArtifact:", {
+                  error: e instanceof Error ? e.message : "Unknown error",
+                  lineLength: line.length,
+                  linePreview:
+                    line.substring(0, 200) + (line.length > 200 ? "..." : ""),
+                });
               }
             }
           }
@@ -683,6 +689,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                 }
               } catch (e) {
                 // 忽略解析错误
+                console.error("JSON parse error in streamRewriteArtifact:", {
+                  error: e instanceof Error ? e.message : "Unknown error",
+                  lineLength: line.length,
+                  linePreview:
+                    line.substring(0, 200) + (line.length > 200 ? "..." : ""),
+                });
               }
             }
           }
@@ -871,6 +883,15 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                 }
               } catch (e) {
                 // 忽略解析错误
+                console.error(
+                  "JSON parse error in streamRewriteHighlightedText:",
+                  {
+                    error: e instanceof Error ? e.message : "Unknown error",
+                    lineLength: line.length,
+                    linePreview:
+                      line.substring(0, 200) + (line.length > 200 ? "..." : ""),
+                  }
+                );
               }
             }
           }
@@ -1323,6 +1344,12 @@ export function GraphProvider({ children }: { children: ReactNode }) {
               }
             } catch (e) {
               // 忽略解析错误
+              console.error("JSON parse error in generateFollowup:", {
+                error: e instanceof Error ? e.message : "Unknown error",
+                lineLength: line.length,
+                linePreview:
+                  line.substring(0, 200) + (line.length > 200 ? "..." : ""),
+              });
             }
           }
         }
