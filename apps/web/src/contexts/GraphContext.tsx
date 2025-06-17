@@ -412,6 +412,10 @@ export function GraphProvider({ children }: { children: ReactNode }) {
               try {
                 const jsonString = line.slice(6).trim();
                 if (!jsonString) continue; // 跳过空的数据行
+                console.log(
+                  "hans-web-streamFirstTimeGeneration-originString",
+                  jsonString
+                );
                 
                 const data = JSON.parse(jsonString);
                 console.log("hans-web-streamFirstTimeGeneration", data);
