@@ -1106,15 +1106,23 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       type: "tool_call",
     });
 
-    // 创建 followup 消息
-    const followupMessage = new AIMessage({
-      id: followupMessageId,
-      content: followupContentRef.current,
-      tool_calls: finalFunctionTools,
-      additional_kwargs: {
+    let followupMessage = null
+    if (data.event === "function_call" || data.event === "agent_thought") {
+      // 创建 followup 消息
+      followupMessage = new AIMessage({
+        id: followupMessageId,
+        content: "",
         tool_calls: finalFunctionTools,
-      },
-    });
+        additional_kwargs: {
+          tool_calls: finalFunctionTools,
+        },
+      });
+    }else{
+      followupMessage = new AIMessage({
+        id: followupMessageId,
+        content: followupContentRef.current,
+      });
+    }
 
     // 更新 UI 状态中的消息
     setMessages((prevMessages) => {
