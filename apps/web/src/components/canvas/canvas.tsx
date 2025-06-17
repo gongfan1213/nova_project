@@ -22,18 +22,10 @@ import React, { useEffect, useState } from "react";
 import { ContentComposerChatInterface } from "./content-composer";
 import NoSSRWrapper from "../NoSSRWrapper";
 import { useThreadContext } from "@/contexts/ThreadProvider";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import { CHAT_COLLAPSED_QUERY_PARAM } from "@/constants";
 import { useRouter, useSearchParams } from "next/navigation";
-import MyNoteDialog from "@/components/MyNoteDialog";
-import { createSupabaseClient } from "@/lib/supabase/client";
 import { ProjectHistoryComponent } from "../chat-interface/thread-history";
 
-const supabase = createSupabaseClient();
 
 export function CanvasComponent({ projectId }: { projectId?: string }) {
   const { graphData } = useGraphContext();
@@ -61,78 +53,6 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
       router.replace(`?${queryParams.toString()}`, { scroll: false });
     }
   }, [chatCollapsedSearchParam]);
-
-  // 加载项目内容
-  useEffect(() => {
-    const loadProject = async () => {
-      if (projectId) {
-        try {
-          const { data: thread, error } = await supabase
-            .from("threads")
-            .select(
-              `
-          id,
-          title,
-          artifacts (
-            id,
-            artifact_contents (
-              id,
-              full_markdown,
-              code,
-              index
-            )
-          )
-        `
-            )
-            .eq("id", projectId)
-            .single();
-
-          if (error) throw error;
-
-          // 日志：打印项目内容
-          console.log("加载到的项目内容:", thread);
-
-          const artifact = thread.artifacts?.[0];
-          let content = null;
-          if (
-            artifact?.artifact_contents &&
-            artifact.artifact_contents.length > 0
-          ) {
-            // 按 index 降序排序，取 index 最大的那条
-            content = [...artifact.artifact_contents].sort(
-              (a, b) => b.index - a.index
-            )[0];
-          }
-          const fullMarkdown = content?.full_markdown || content?.code || "";
-
-          const artifactContent: ArtifactMarkdownV3 = {
-            index: 1,
-            type: "text",
-            title: thread.title,
-            fullMarkdown,
-          };
-
-          const newArtifact: ArtifactV3 = {
-            currentIndex: 1,
-            contents: [artifactContent],
-          };
-
-          setArtifact(newArtifact);
-          setChatStarted(true);
-          setIsEditing(true);
-        } catch (error) {
-          console.error("Error loading project:", error);
-          toast({
-            title: "加载失败",
-            description: "无法加载项目内容",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-
-    loadProject();
-  }, [projectId, setArtifact, setChatStarted, toast]);
 
   const handleQuickStart = (
     type: "text" | "code",
