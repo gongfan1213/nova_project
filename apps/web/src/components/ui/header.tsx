@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserIcon, LogOutIcon } from "lucide-react";
+import { UserIcon, LogOutIcon, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { useModel } from "@/contexts/ModelContext";
@@ -31,6 +32,7 @@ export function Header() {
   const { user } = useUserContext();
   const { threadId } = useThreadContext();
   const { modelName, setModelName, modelConfig, setModelConfig, modelConfigs } = useModel();
+  const [navLoading, setNavLoading] = useState<string | null>(null);
 
   const handleLogout = async () => {
     if (SKIP_AUTH) {
@@ -53,6 +55,18 @@ export function Header() {
   const handleProfileClick = () => {
     router.push('/profile');
   };
+
+  const handleNavClick = (href: string, navKey: string) => {
+    if (pathname !== href) {
+      setNavLoading(navKey);
+      router.push(href);
+    }
+  };
+
+  // 监听路径变化，清除loading状态
+  useEffect(() => {
+    setNavLoading(null);
+  }, [pathname]);
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-0 sticky top-0 z-30">
@@ -86,32 +100,38 @@ export function Header() {
           "flex items-center space-x-8 flex-1 justify-center",
           threadId && "hidden"
         )}>
-          <Link href="/">
-            <Button
-              variant="ghost"
-              className={cn(
-                "relative px-4 py-8 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
-                pathname === "/"
-                  ? "text-gray-900 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:opacity-100"
-                  : "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-300 after:opacity-0 hover:after:opacity-100"
-              )}
-            >
-              首页
-            </Button>
-          </Link>
-          <Link href="/my-projects">
-            <Button
-              variant="ghost"
-              className={cn(
-                "relative px-4 py-8 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
-                pathname === "/my-projects"
-                  ? "text-gray-900 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:opacity-100"
-                  : "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-300 after:opacity-0 hover:after:opacity-100"
-              )}
-            >
-              我的项目
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            onClick={() => handleNavClick('/', 'home')}
+            disabled={navLoading === 'home'}
+            className={cn(
+              "relative px-4 py-8 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
+              pathname === "/"
+                ? "text-gray-900 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:opacity-100"
+                : "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-300 after:opacity-0 hover:after:opacity-100"
+            )}
+          >
+            {navLoading === 'home' ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            首页
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => handleNavClick('/my-projects', 'projects')}
+            disabled={navLoading === 'projects'}
+            className={cn(
+              "relative px-4 py-8 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
+              pathname === "/my-projects"
+                ? "text-gray-900 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:opacity-100"
+                : "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-300 after:opacity-0 hover:after:opacity-100"
+            )}
+          >
+            {navLoading === 'projects' ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            我的项目
+          </Button>
         </nav>
         {/* 右侧模型选择器和N图标 */}
         <div className="flex items-center space-x-4">
