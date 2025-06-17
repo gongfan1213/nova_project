@@ -57,18 +57,21 @@ export const ToolCallRendererXhsSearch = ({ toolGroup }: { toolGroup: any }) => 
       <div className="text-sm text-gray-600">
         找到 {xhsArray.length} 个小红书内容
       </div>
-      
+
       {xhsArray.length > 0 ? (
         <div className="flex flex-col space-y-3">
           {xhsArray?.slice(0, 3).map((item, index) => (
-            <div key={index} className="flex bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+            <div
+              key={index}
+              className="flex bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
+            >
               <div className="flex-shrink-0">
-                <img 
-                  src={item.note_cover_url_default} 
-                  alt={item.note_display_title}
+                <img
+                  src={item.note_cover_url_default}
+                  alt={"cover"}
                   className="w-24 h-24 object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none'
+                    // (e.target as HTMLImageElement).style.display = 'none'
                   }}
                 />
               </div>
@@ -84,15 +87,25 @@ export const ToolCallRendererXhsSearch = ({ toolGroup }: { toolGroup: any }) => 
                       </p>
                     )}
                   </div>
-                  <a 
-                    href={item.note_url} 
-                    target="_blank" 
+                  <a
+                    href={item.note_url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="ml-3 inline-flex items-center text-xs text-blue-600 hover:text-blue-800 font-medium"
                   >
                     查看
-                    <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    <svg
+                      className="w-3 h-3 ml-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
                     </svg>
                   </a>
                 </div>
@@ -101,10 +114,8 @@ export const ToolCallRendererXhsSearch = ({ toolGroup }: { toolGroup: any }) => 
           ))}
         </div>
       ) : (
-        <div className="text-gray-500 text-sm">
-          未找到小红书内容数据
-        </div>
+        <div className="text-gray-500 text-sm">未找到小红书内容数据</div>
       )}
     </div>
-  )
+  );
 }
