@@ -388,6 +388,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       const reader = generateResponse.body?.getReader();
       const decoder = new TextDecoder();
       let artifactContent = "";
+      let onlyArtifactContent = ""
       followupContentRef.current = "";
       let receivedConversationId = "";
 
@@ -439,20 +440,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                   }
 
                   if (data.answer) {
-                    artifactContent += data.answer;
-                    // 实时更新artifact显示
-                    const newArtifact: ArtifactV3 = {
-                      currentIndex: 1,
-                      contents: [
-                        {
-                          index: 1,
-                          type: "text" as const, // 这里可以根据内容判断是code还是text
-                          title: "Generated Artifact",
-                          fullMarkdown: artifactContent,
-                        },
-                      ],
-                    };
-
                     if (!firstTokenReceived) {
                       setFirstTokenReceived(true);
                     }
@@ -463,7 +450,41 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                       finalFunctionTools,
                       data
                     );
+
+
+                    artifactContent += data.answer;
+                    
+                    const openTag = '<artifact>';
+                    const closeTag = '</artifact>';
+                    let content = artifactContent;
+                    
+                    const openIndex = content.indexOf(openTag);
+                    if (openIndex !== -1) {
+                        content = content.substring(openIndex + openTag.length);
+                        const closeIndex = content.indexOf(closeTag);
+                        if (closeIndex !== -1) {
+                            content = content.substring(0, closeIndex);
+                        }
+                    } else {
+                        content = ""; // If no open tag, artifact content is empty
+                    }
+                    onlyArtifactContent = content;
+
+                    // 实时更新artifact显示
+                    const newArtifact: ArtifactV3 = {
+                      currentIndex: 1,
+                      contents: [
+                        {
+                          index: 1,
+                          type: "text" as const, // 这里可以根据内容判断是code还是text
+                          title: "Generated Artifact",
+                          fullMarkdown: onlyArtifactContent,
+                        },
+                      ],
+                    };
+
                     setArtifact(newArtifact);
+                    
                     finalArtifact = newArtifact;
                   }
                 }
@@ -602,6 +623,22 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                 }
                 if (data.event === "message" || data.event === "agent_message" && data.answer) {
                   artifactContent += data.answer;
+
+                  const openTag = '<artifact>';
+                  const closeTag = '</artifact>';
+                  let content = artifactContent;
+                  
+                  const openIndex = content.indexOf(openTag);
+                  if (openIndex !== -1) {
+                      content = content.substring(openIndex + openTag.length);
+                      const closeIndex = content.indexOf(closeTag);
+                      if (closeIndex !== -1) {
+                          content = content.substring(0, closeIndex);
+                      }
+                  } else {
+                      content = "";
+                  }
+
                   // index 从1 开始
                   let currentIndex = artifact?.currentIndex || 0;
                   const contents = artifact?.contents || [];
@@ -616,7 +653,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                         index: currentIndex,
                         type: "text" as const,
                         title: "Generated Artifact",
-                        fullMarkdown: artifactContent,
+                        fullMarkdown: content,
                       },
                     ],
                   };
