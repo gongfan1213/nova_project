@@ -21,6 +21,7 @@ import {
 import { visit } from "unist-util-visit";
 import { ToolCallRenderer, groupToolCalls } from "@/components/chat-interface/ToolCallRenderer";
 import { useMessage } from "@assistant-ui/react";
+import { useGraphContext } from "@/contexts/GraphContext";
 
 import { TooltipIconButton } from "@/components/ui/assistant-ui/tooltip-icon-button";
 import { SyntaxHighlighter } from "@/components/ui/assistant-ui/syntax-highlighter";
@@ -43,6 +44,8 @@ const ThinkComponent = ({
   children,
   ...props
 }: ThinkComponentProps) => {
+  const { graphData } = useGraphContext();
+  const { isStreaming } = graphData;
   const isThinking = unclosed === true;
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -66,21 +69,21 @@ const ThinkComponent = ({
       <div
         className={cn(
           "flex items-center justify-between px-4 py-1",
-          !isThinking && "cursor-pointer"
+          !(isThinking && isStreaming) && "cursor-pointer"
         )}
         onClick={handleToggleCollapse}
       >
         <div className="flex items-center gap-2">
-          {isThinking ? (
+          {(isThinking && isStreaming) ? (
             <Loader2 className="h-5 w-5 animate-spin " />
           ) : (
             <BrainCircuit className="h-5 w-5 " />
           )}
           <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-            {isThinking ? "think..." : "think"}
+            {(isThinking && isStreaming) ? "think..." : "think"}
           </span>
         </div>
-        {!isThinking && (
+        {!(isThinking && isStreaming) && (
           <ChevronDown
             className={cn(
               "h-5 w-5 text-zinc-500 transition-transform",
@@ -254,7 +257,7 @@ const ToolCallComponent = ({ name, run_time, ...props }: ToolCallComponentProps)
   if(targetToolCall.observation){
     return null; // 结束的不渲染
   }
-  
+
   // 从 additional_kwargs 中获取原始的 ToolCallData 数据来构建 ToolCallGroup
   const toolCallsData = toolCallsFromMetadata;
   const toolGroups = groupToolCalls(toolCallsData);
