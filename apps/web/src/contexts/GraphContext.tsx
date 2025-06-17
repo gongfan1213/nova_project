@@ -393,6 +393,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       let onlyArtifactContent = ""
       followupContentRef.current = "";
       let receivedConversationId = "";
+      let buffer = ""; // 添加缓冲区来处理不完整的数据
 
       if (reader) {
         while (true) {
@@ -400,13 +401,19 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
+          buffer += chunk; // 将新数据添加到缓冲区
           
+          // 按行分割，但保留最后一个可能不完整的行
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // 保存最后一个可能不完整的行
+
           for (const line of lines) {
             if (line.trim() && line.startsWith("data: ")) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const jsonString = line.slice(6).trim();
+                if (!jsonString) continue; // 跳过空的数据行
+                
+                const data = JSON.parse(jsonString);
                 console.log("hans-web-streamFirstTimeGeneration", data);
                 // data: {"event":"error","conversation_id":"438f477d-9ab2-4977-a56b-4a618403dbe7","message_id":"f981fefa-ffb1-449f-9bc5-4f3b93514945","created_at":1750147654,"code":"invalid_param","status":400,"message":"Expecting value: line 1 column 2 (char 1)"}
                 if (data.event === "error") {
@@ -597,6 +604,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       const reader = generateResponse.body?.getReader();
       const decoder = new TextDecoder();
       let artifactContent = "";
+      let buffer = ""; // 添加缓冲区来处理不完整的数据
 
       if (reader) {
         while (true) {
@@ -604,12 +612,19 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
+          buffer += chunk; // 将新数据添加到缓冲区
+          
+          // 按行分割，但保留最后一个可能不完整的行
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // 保存最后一个可能不完整的行
 
           for (const line of lines) {
             if (line.trim() && line.startsWith("data: ")) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const jsonString = line.slice(6).trim();
+                if (!jsonString) continue; // 跳过空的数据行
+                
+                const data = JSON.parse(jsonString);
                 console.log('hans-web-streamRewriteArtifact-data', data);
                 if (data.event === "function_call" || data.event === "agent_thought") {
                   console.log('hans-web-streamFirstTimeGeneration-function_call', data);
@@ -767,6 +782,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       let updatedArtifactStartContent: string | undefined = undefined;
       let updatedArtifactRestContent: string | undefined = undefined;
       let isFirstUpdate = true;
+      let buffer = ""; // 添加缓冲区来处理不完整的数据
 
       if (reader) {
         while (true) {
@@ -774,13 +790,20 @@ export function GraphProvider({ children }: { children: ReactNode }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
+          buffer += chunk; // 将新数据添加到缓冲区
+          
+          // 按行分割，但保留最后一个可能不完整的行
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // 保存最后一个可能不完整的行
           console.log("hans-web-chunk", chunk);
 
           for (const line of lines) {
             if (line.trim() && line.startsWith("data: ")) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const jsonString = line.slice(6).trim();
+                if (!jsonString) continue; // 跳过空的数据行
+                
+                const data = JSON.parse(jsonString);
                 if (data.event === "message" && data.answer) {
                   // 模拟 langgraphNode === "updateHighlightedText" 的处理逻辑
                   const partialUpdatedContent = data.answer;
@@ -1278,18 +1301,26 @@ export function GraphProvider({ children }: { children: ReactNode }) {
 
     if (followupReader) {
       const decoder = new TextDecoder()
+      let buffer = ""; // 添加缓冲区来处理不完整的数据
       
       while (true) {
         const { done, value } = await followupReader.read()
         if (done) break
 
         const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split("\n")
+        buffer += chunk; // 将新数据添加到缓冲区
+        
+        // 按行分割，但保留最后一个可能不完整的行
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // 保存最后一个可能不完整的行
 
         for (const line of lines) {
           if (line.trim() && line.startsWith("data: ")) {
             try {
-              const data = JSON.parse(line.slice(6))
+              const jsonString = line.slice(6).trim();
+              if (!jsonString) continue; // 跳过空的数据行
+              
+              const data = JSON.parse(jsonString)
               if (data.event === "message" && data.answer) {
                 followupContent += data.answer
 
