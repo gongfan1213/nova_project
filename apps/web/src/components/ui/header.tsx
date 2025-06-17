@@ -12,7 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserIcon, LogOutIcon, Loader2 } from "lucide-react";
+import {
+  UserIcon,
+  LogOutIcon,
+  Loader2,
+  FolderIcon,
+  HomeIcon,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { useModel } from "@/contexts/ModelContext";
@@ -161,11 +167,31 @@ export function Header() {
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                onClick={()=>{
+                  router.push("/");
+                }}
+                className="cursor-pointer"
+              >
+                <HomeIcon className="mr-2 h-4 w-4" />
+                首页
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={()=>{
+                  router.push('/my-projects')
+                }}
+                className="cursor-pointer"
+              >
+                <FolderIcon className="mr-2 h-4 w-4" />
+                我的项目
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
                 onClick={handleProfileClick}
                 className="cursor-pointer"
               >
                 <UserIcon className="mr-2 h-4 w-4" />
-                Profile
+                个人信息
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
