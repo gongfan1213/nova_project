@@ -80,8 +80,16 @@ export const FCRenderComponent: React.FC<FCRenderComponentProps> = ({
       </>
     );
   };
+  // 如果是 xhsSearch 工具且已完成，默认展开
+  const shouldDefaultOpen = tool === "xhsSearch" && isComplete;
+
   return (
-    <Accordion type="single" collapsible className="w-full">
+    <Accordion 
+      type="single" 
+      collapsible 
+      className="w-full"
+      defaultValue={shouldDefaultOpen ? `tool-call-${startCall.id}` : undefined}
+    >
       <AccordionItem
         value={`tool-call-${startCall.id}`}
         className="border-none"
