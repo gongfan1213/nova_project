@@ -1135,29 +1135,31 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     } else {
       if (data.answer) {
         let contentToAdd = '';
-        let currentChunk = data.answer;
+        let chunk = data.answer;
         
-        while (currentChunk.length > 0) {
-          if (!isInArtifactTag.current) {
-            const openIndex = currentChunk.indexOf('<artifact>');
-            if (openIndex > -1) {
-              contentToAdd += currentChunk.substring(0, openIndex);
-              currentChunk = currentChunk.substring(openIndex + '<artifact>'.length);
-              isInArtifactTag.current = true;
-            } else {
-              contentToAdd += currentChunk;
-              currentChunk = '';
-            }
-          }
-          
+        while (chunk.length > 0) {
           if (isInArtifactTag.current) {
-            const closeIndex = currentChunk.indexOf('</artifact>');
-            if (closeIndex > -1) {
-              currentChunk = currentChunk.substring(closeIndex + '</artifact>'.length);
+            // We are inside an artifact tag, skip until we find the closing tag
+            const closeIndex = chunk.indexOf('</artifact>');
+            if (closeIndex !== -1) {
+              chunk = chunk.substring(closeIndex + '</artifact>'.length);
               isInArtifactTag.current = false;
             } else {
-              // We are still inside an artifact tag, so we discard the rest of this chunk.
-              currentChunk = '';
+              // Still inside artifact, discard the rest of this chunk
+              chunk = '';
+            }
+          } else {
+            // We are not in an artifact tag, look for opening tag
+            const openIndex = chunk.indexOf('<artifact>');
+            if (openIndex !== -1) {
+              // Found opening tag, add content before it
+              contentToAdd += chunk.substring(0, openIndex);
+              chunk = chunk.substring(openIndex + '<artifact>'.length);
+              isInArtifactTag.current = true;
+            } else {
+              // No artifact tag found, add all content
+              contentToAdd += chunk;
+              chunk = '';
             }
           }
         }
