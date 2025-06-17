@@ -25,17 +25,19 @@ import { useThreadContext } from "@/contexts/ThreadProvider";
 import { CHAT_COLLAPSED_QUERY_PARAM } from "@/constants";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProjectHistoryComponent } from "../chat-interface/thread-history";
+import { CanvasLoading } from "./canavas-loading";
 
 
 export function CanvasComponent({ projectId }: { projectId?: string }) {
   const { graphData } = useGraphContext();
-  const { setModelName, setModelConfig } = useThreadContext();
-  const { setArtifact, chatStarted, setChatStarted } = graphData;
+  const { setModelName, setModelConfig, threadId } = useThreadContext();
+  const { setArtifact, chatStarted, setChatStarted, messages, artifact } = graphData;
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [webSearchResultsOpen, setWebSearchResultsOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [projectCollapsed, setProjectCollapsed] = useState(false);
+  const [isLoadingThread, setIsLoadingThread] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -53,6 +55,23 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
       router.replace(`?${queryParams.toString()}`, { scroll: false });
     }
   }, [chatCollapsedSearchParam]);
+
+  // 检测 URL 中的 threadId，如果存在则启动 chat 状态
+  useEffect(() => {
+    if (threadId) {
+      setChatStarted(true);
+      setIsLoadingThread(true);
+    } else {
+      setIsLoadingThread(false);
+    }
+  }, [threadId, setChatStarted]);
+
+  // 监听线程数据加载状态，当有消息或artifact时说明加载完成
+  useEffect(() => {
+    if (threadId && (messages.length > 0 || artifact)) {
+      setIsLoadingThread(false);
+    }
+  }, [threadId, messages.length, artifact]);
 
   const handleQuickStart = (
     type: "text" | "code",
@@ -99,6 +118,11 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
 
   return (
     <PanelGroup direction="horizontal">
+      {/* 如果有 threadId 但正在加载，显示加载状态 */}
+      {chatStarted && isLoadingThread && (
+        <CanvasLoading />
+      )}
+      
       {!chatStarted && (
         <NoSSRWrapper>
           <ContentComposerChatInterface
@@ -164,7 +188,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
       )}
       <PanelResizeHandle className="z-10 flex h-[calc(100vh-64px)] w-[3px] items-center justify-center rounded-sm border bg-border" />
 
-      {chatStarted && (
+      {chatStarted && !isLoadingThread && (
         <>
           <Panel className="h-[calc(100vh-64px)]" defaultSize={45} minSize={20}>
             <div className="w-full ml-auto">
@@ -197,7 +221,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
           <PanelResizeHandle className="z-10 flex h-[calc(100vh-64px)] w-[3px] items-center justify-center rounded-sm border bg-border" />
 
           {/*  */}
-          {!chatCollapsed && chatStarted && (
+          {!chatCollapsed && chatStarted && !isLoadingThread && (
             <Panel
               className=" h-[calc(100vh-64px)]"
               defaultSize={45}
