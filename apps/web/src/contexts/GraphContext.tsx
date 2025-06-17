@@ -1079,50 +1079,39 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     data: any
   ) => {
     console.log("hansking-fc-data", data.tool_input);
-    if(data.answer){
-    console.log("hansking-message-data", data.answer);
-      followupContentRef.current = followupContentRef.current + data.answer;
-    }
 
-    // data.thought &&
-    //   (followupContentRef.current = followupContentRef.current + data.thought);
-
-    // 需要替换掉 <artifact>xxx</artifact>
-    followupContentRef.current = followupContentRef.current.replace(
-      /<artifact>[\s\S]*<\/artifact>/g,
-      ""
-    );
-
-    //   export type ToolCall = {
-    //     name: string;
-    //     args: Record<string, any>;
-    //     id?: string;
-    //     type?: "tool_call";
-    // };
-    finalFunctionTools.push({
-      ...data,
-      name: data.tool,
-      args: data.tool_input,
-      type: "tool_call",
-    });
+    
 
     let followupMessage = null
     if (data.event === "function_call" || data.event === "agent_thought") {
       // 创建 followup 消息
-      followupMessage = new AIMessage({
-        id: followupMessageId,
-        content: "",
-        tool_calls: finalFunctionTools,
-        additional_kwargs: {
-          tool_calls: finalFunctionTools,
-        },
+      finalFunctionTools.push({
+        ...data,
+        name: data.tool,
+        args: data.tool_input,
+        type: "tool_call",
       });
+      
     }else{
-      followupMessage = new AIMessage({
-        id: followupMessageId,
-        content: followupContentRef.current,
-      });
+      if (data.answer) {
+        console.log("hansking-message-data", data.answer);
+        followupContentRef.current = followupContentRef.current + data.answer;
+      }
+      // 需要替换掉 <artifact>xxx</artifact>
+      followupContentRef.current = followupContentRef.current.replace(
+        /<artifact>[\s\S]*<\/artifact>/g,
+        ""
+      );
     }
+
+    followupMessage = new AIMessage({
+      id: followupMessageId,
+      content: followupContentRef.current,
+      tool_calls: finalFunctionTools,
+      additional_kwargs: {
+        tool_calls: finalFunctionTools,
+      },
+    });
 
     // 更新 UI 状态中的消息
     setMessages((prevMessages) => {
