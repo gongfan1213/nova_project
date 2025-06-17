@@ -68,7 +68,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
 
   // 监听线程数据加载状态，当有消息或artifact时说明加载完成
   useEffect(() => {
-    if (threadId && (messages.length > 0 || artifact)) {
+    if (threadId && (messages || artifact)) {
       setIsLoadingThread(false);
     }
   }, [threadId, messages.length, artifact]);
@@ -119,7 +119,7 @@ export function CanvasComponent({ projectId }: { projectId?: string }) {
   return (
     <PanelGroup direction="horizontal">
       {/* 如果有 threadId 但正在加载，显示加载状态 */}
-      {chatStarted && isLoadingThread && (
+      {isLoadingThread && (
         <CanvasLoading />
       )}
       

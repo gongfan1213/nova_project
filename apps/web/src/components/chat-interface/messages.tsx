@@ -140,7 +140,7 @@ export const AssistantMessage: FC<AssistantMessageProps> = ({
         {/* Function Tools */}
         {/* <div className="">{JSON.stringify(message?.metadata?.custom?.tool_calls)}</div> */}
 
-        {(() => {
+        {/* {(() => {
           const toolCalls = (message as any).metadata?.custom?.tool_calls || []
           const toolGroups = groupToolCalls(toolCalls)
           
@@ -151,7 +151,7 @@ export const AssistantMessage: FC<AssistantMessageProps> = ({
               className="mt-4"
             />
           ))
-        })()}
+        })()} */}
       </div>
     </MessagePrimitive.Root>
   );

@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 // @ts-ignore
 import { visit } from "unist-util-visit";
+import { ToolCallRenderer, groupToolCalls } from "@/components/chat-interface/ToolCallRenderer";
+import { useMessage } from "@assistant-ui/react";
 
 import { TooltipIconButton } from "@/components/ui/assistant-ui/tooltip-icon-button";
 import { SyntaxHighlighter } from "@/components/ui/assistant-ui/syntax-highlighter";
@@ -28,6 +30,11 @@ import "katex/dist/katex.min.css";
 
 interface ThinkComponentProps extends HTMLAttributes<HTMLDivElement> {
   "data-unclosed"?: boolean;
+}
+
+interface ToolCallComponentProps extends HTMLAttributes<HTMLDivElement> {
+  name?: string;
+  run_time?: string;
 }
 
 const ThinkComponent = ({
@@ -117,55 +124,157 @@ const rehypeMarkUnclosed = () => {
 };
 
 
-// 修复插件：处理解析器错误地将嵌套的 think 和 message 标签提升为平铺结构
+// 修复插件：处理解析器错误地将嵌套的 think、message 和 tool_call 标签提升为完全平铺结构
 const rehypeFixNesting = () => {
   return (tree: any) => {
     let hasChanges = true
+    
+    // 需要平铺的标签类型
+    const tagsToFlatten = ['think', 'message', 'novatoolcall']
     
     // 反复处理直到没有更多嵌套
     while (hasChanges) {
       hasChanges = false
       
       visit(tree, 'element', (node, index, parent) => {
-        // 处理 think 和 message 标签的嵌套
+        // 处理需要平铺的标签的嵌套
         if (
-          (node.tagName === 'think' || node.tagName === 'message') &&
+          tagsToFlatten.includes(node.tagName) &&
           parent &&
           typeof index === 'number'
         ) {
           const elementsToHoist: any[] = []
-          let elementFound = false
+          
+          // 递归地找到所有嵌套的标签元素
+          const findNestedElements = (children: any[]): any[] => {
+            const nested: any[] = []
+            
+            children.forEach((child: any) => {
+              if (child.type === 'element' && tagsToFlatten.includes(child.tagName)) {
+                nested.push(child)
+                // 递归查找更深层的嵌套
+                if (child.children) {
+                  nested.push(...findNestedElements(child.children))
+                }
+              } else if (child.children) {
+                // 在其他元素中也查找嵌套的标签
+                nested.push(...findNestedElements(child.children))
+              }
+            })
+            
+            return nested
+          }
 
-          // 过滤出嵌套的 think 和 message 元素并将其从当前节点的子节点中移除
-          const newChildren = node.children.filter((child: any) => {
-            if (
-              child.type === 'element' &&
-              (child.tagName === 'think' || child.tagName === 'message')
-            ) {
-              elementsToHoist.push(child)
-              elementFound = true
-              hasChanges = true
-              return false // 从 children 中移除
+          // 查找所有嵌套的元素
+          const nestedElements = findNestedElements(node.children || [])
+          
+          if (nestedElements.length > 0) {
+            elementsToHoist.push(...nestedElements)
+            hasChanges = true
+            
+            // 从原始节点中移除所有嵌套的元素
+            const removeNestedElements = (children: any[]): any[] => {
+              return children.filter((child: any) => {
+                if (child.type === 'element' && tagsToFlatten.includes(child.tagName)) {
+                  return false // 移除嵌套的标签
+                }
+                if (child.children) {
+                  child.children = removeNestedElements(child.children)
+                }
+                // 移除空的文本节点
+                if (child.type === 'text' && child.value.trim() === '') {
+                  return false
+                }
+                return true
+              })
             }
-            // 如果已经找到了嵌套元素，并且当前节点是空的文本节点（通常是换行符），也一并移除
-            if (elementFound && child.type === 'text' && child.value.trim() === '') {
-              return false
-            }
-            return true
-          })
-
-          // 如果找到了需要提升的元素
-          if (elementsToHoist.length > 0) {
-            node.children = newChildren
-
-            // 将嵌套的元素插入到 parent 的子节点中，使其成为当前节点的兄弟节点
+            
+            node.children = removeNestedElements(node.children || [])
+            
+            // 将所有嵌套的元素插入到父节点中，成为当前节点的兄弟节点
             parent.children.splice(index + 1, 0, ...elementsToHoist)
           }
         }
       })
     }
+    
+    // 额外的清理：确保标签之间的空白文本节点被正确处理
+    visit(tree, 'element', (node, index, parent) => {
+      if (
+        tagsToFlatten.includes(node.tagName) &&
+        parent &&
+        typeof index === 'number'
+      ) {
+        // 清理标签内部的空白文本节点
+        if (node.children) {
+          node.children = node.children.filter((child: any) => {
+            if (child.type === 'text') {
+              const trimmed = child.value.trim()
+              // 保留有内容的文本节点
+              return trimmed.length > 0
+            }
+            return true
+          })
+        }
+      }
+    })
   }
 }
+
+const ToolCallComponent = ({ name, run_time, ...props }: ToolCallComponentProps) => {
+  const message = useMessage();
+  
+  // 从消息的 metadata 中获取工具调用数据（这些是通过 run_time 匹配的数据）
+  const toolCallsFromMetadata = (message as any).metadata?.custom?.tool_calls || [];
+  
+  // 根据 run_time 找到对应的工具调用
+  const targetToolCall = toolCallsFromMetadata.find((call: any) => {
+    // 检查工具名称是否匹配
+    if (name && call.name !== name) {
+      return false;
+    }
+    
+    // 如果有 run_time，则按照 run_time 匹配
+    if (run_time) {
+      const targetRunTime = parseInt(run_time);
+      const callRunTime = call.run_time;
+      
+      // 允许一定的时间误差（比如 1000ms）
+      return Math.abs(callRunTime - targetRunTime) < 1000;
+    }
+    
+    return true; // 如果没有 run_time，仅通过名称匹配
+  });
+  
+  
+  if (!targetToolCall) {
+    return null; // 如果找不到对应的工具调用，不渲染任何内容
+  }
+
+  if(targetToolCall.observation){
+    return null; // 结束的不渲染
+  }
+  
+  // 从 additional_kwargs 中获取原始的 ToolCallData 数据来构建 ToolCallGroup
+  const toolCallsData = toolCallsFromMetadata;
+  const toolGroups = groupToolCalls(toolCallsData);
+  
+  // 根据工具名称找到对应的组
+  const targetToolGroup = toolGroups.find(group => group.tool === targetToolCall.name);
+  
+  if (!targetToolGroup) {
+    // return <div>fc222222</div>
+    return null;
+  }
+  
+  return (
+    <ToolCallRenderer
+      toolGroup={targetToolGroup}
+      className="my-4"
+      {...props}
+    />
+  );
+};
 
 const MarkdownTextImpl = () => {
   return (
@@ -183,6 +292,14 @@ const MarkdownTextImpl = () => {
           <ThinkComponent
             className={className}
             data-unclosed={unclosed}
+            {...props}
+          />
+        ),
+        // @ts-ignore
+        novatoolcall: ({ node: _node, name, run_time, ...props }: any) => (
+          <ToolCallComponent
+            name={name}
+            run_time={run_time}
             {...props}
           />
         ),

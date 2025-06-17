@@ -225,7 +225,17 @@ const MyProjects = () => {
         <div className="mb-8">
           <div className="relative mb-6">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
             </span>
             <Input
               value={searchQuery}
@@ -271,27 +281,26 @@ const MyProjects = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {filteredProjects.map((project) => (
-            <Card
-              key={project.id}
-              className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group w-full max-w-[300px] min-w-[220px] mx-auto rounded-3xl h-[260px] flex flex-col"
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between mb-3">
-                  {editingTitle === project.id ? (
-                    <Input
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className="text-base font-semibold text-gray-900 transition-colors flex-1"
-                      autoFocus
-                    />
-                  ) : (
-                    <CardTitle
-                      className="text-base font-semibold text-gray-900 transition-colors flex-1 group-hover:text-red-600 line-clamp-2 break-all min-h-[48px] flex items-start"
-                    >
-                      {project.title}
-                    </CardTitle>
-                  )}
-                  {/* <Dialog open={statusDialogOpen === project.id} onOpenChange={open => setStatusDialogOpen(open ? project.id : null)}>
+            <Link href={`/?threadId=${project.id}`} key={project.id}>
+              <Card
+                key={project.id}
+                className="hover:shadow-lg transition-all duration-200 cursor-pointer border-0 shadow-md group w-full max-w-[300px] min-w-[220px] mx-auto rounded-3xl h-[260px] flex flex-col"
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between mb-3">
+                    {editingTitle === project.id ? (
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="text-base font-semibold text-gray-900 transition-colors flex-1"
+                        autoFocus
+                      />
+                    ) : (
+                      <CardTitle className="text-base font-semibold text-gray-900 transition-colors flex-1 group-hover:text-red-600 line-clamp-2 break-all min-h-[48px] flex items-start">
+                        {project.title}
+                      </CardTitle>
+                    )}
+                    {/* <Dialog open={statusDialogOpen === project.id} onOpenChange={open => setStatusDialogOpen(open ? project.id : null)}>
                     <DialogTrigger asChild>
                       <Badge
                         className={
@@ -325,18 +334,21 @@ const MyProjects = () => {
                       </div>
                     </DialogContent>
                   </Dialog> */}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 flex flex-col h-full">
-                <p className="text-gray-600 mb-4 leading-relaxed min-h-[72px] max-h-[72px] overflow-hidden line-clamp-3 break-all flex items-start">
-                  {project.description}
-                </p>
-                <div className="flex items-center justify-between mb-2 mt-auto">
-                  <div className="flex items-center justify-between w-full ">
-                    <span className="text-xs text-gray-500 group-hover:hidden">
-                      最后修改: {project.updated_at ? project.updated_at.slice(0, 10) : ""}
-                    </span>
-                    {/* <span className="flex gap-1 ml-2 items-center">
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 flex flex-col h-full">
+                  <p className="text-gray-600 mb-4 leading-relaxed min-h-[72px] max-h-[72px] overflow-hidden line-clamp-3 break-all flex items-start">
+                    {project.description}
+                  </p>
+                  <div className="flex items-center justify-between mb-2 mt-auto">
+                    <div className="flex items-center justify-between w-full ">
+                      <span className="text-xs text-gray-500 group-hover:hidden">
+                        最后修改:{" "}
+                        {project.updated_at
+                          ? project.updated_at.slice(0, 10)
+                          : ""}
+                      </span>
+                      {/* <span className="flex gap-1 ml-2 items-center">
                       {(project.tags || '').split(',').filter(Boolean).map((tag: string, idx: number) => (
                         <span
                           key={idx}
@@ -427,23 +439,38 @@ const MyProjects = () => {
                         </DialogContent>
                       </Dialog>
                     </span> */}
-                  </div>
-                  <div className="hidden group-hover:flex items-center justify-end w-full space-x-1">
-                    <Link href={`/?threadId=${project.id}`}>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50">
-                        <Edit3 size={14} />
+                    </div>
+                    <div className="hidden group-hover:flex items-center justify-end w-full space-x-1">
+                      <Link href={`/?threadId=${project.id}`}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Edit3 size={14} />
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-green-600 hover:bg-green-50"
+                        onClick={() => handleCopyProject(project)}
+                      >
+                        <Copy size={14} />
                       </Button>
-                    </Link>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-gray-500 hover:text-green-600 hover:bg-green-50" onClick={() => handleCopyProject(project)}>
-                      <Copy size={14} />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteProject(project.id)}>
-                      <Trash2 size={14} />
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleDeleteProject(project.id)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </main>

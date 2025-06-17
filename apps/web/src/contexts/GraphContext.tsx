@@ -408,6 +408,16 @@ export function GraphProvider({ children }: { children: ReactNode }) {
               try {
                 const data = JSON.parse(line.slice(6));
                 console.log("hans-web-streamFirstTimeGeneration", data);
+                // data: {"event":"error","conversation_id":"438f477d-9ab2-4977-a56b-4a618403dbe7","message_id":"f981fefa-ffb1-449f-9bc5-4f3b93514945","created_at":1750147654,"code":"invalid_param","status":400,"message":"Expecting value: line 1 column 2 (char 1)"}
+                if (data.event === "error") {
+                  toast({
+                    title: "Error",
+                    description: data.message,
+                    variant: "destructive",
+                    duration: 5000,
+                  });
+                  continue;
+                }
                 if (
                   data.event === "function_call" ||
                   data.event === "agent_thought"
@@ -453,22 +463,21 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                       data
                     );
 
-
                     artifactContent += data.answer;
-                    
-                    const openTag = '<artifact>';
-                    const closeTag = '</artifact>';
+
+                    const openTag = "<artifact>";
+                    const closeTag = "</artifact>";
                     let content = artifactContent;
-                    
+
                     const openIndex = content.indexOf(openTag);
                     if (openIndex !== -1) {
-                        content = content.substring(openIndex + openTag.length);
-                        const closeIndex = content.indexOf(closeTag);
-                        if (closeIndex !== -1) {
-                            content = content.substring(0, closeIndex);
-                        }
+                      content = content.substring(openIndex + openTag.length);
+                      const closeIndex = content.indexOf(closeTag);
+                      if (closeIndex !== -1) {
+                        content = content.substring(0, closeIndex);
+                      }
                     } else {
-                        content = ""; // If no open tag, artifact content is empty
+                      content = ""; // If no open tag, artifact content is empty
                     }
                     onlyArtifactContent = content;
 
@@ -486,11 +495,10 @@ export function GraphProvider({ children }: { children: ReactNode }) {
                     };
 
                     setArtifact(newArtifact);
-                    
+
                     finalArtifact = newArtifact;
                   }
                 }
-
               } catch (e) {
                 // 忽略解析错误
               }
@@ -1123,6 +1131,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     
 
     let followupMessage = null
+    let timeStamp = new Date().getTime()
+
     if (data.event === "function_call" || data.event === "agent_thought") {
       // 创建 followup 消息
       finalFunctionTools.push({
@@ -1130,8 +1140,11 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         name: data.tool,
         args: data.tool_input,
         type: "tool_call",
+        run_time: timeStamp,
       });
-      
+      if(data.tool){
+        followupContentRef.current += `\n<novatoolcall name="${data.tool}" run_time="${timeStamp}"></novatoolcall>\n`;
+      }
     } else {
       if (data.answer) {
         let contentToAdd = '';

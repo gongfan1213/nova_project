@@ -16,6 +16,7 @@ import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { useModel } from "@/contexts/ModelContext";
 import { useUserContext } from "@/contexts/UserContext";
+import { useThreadContext } from "@/contexts/ThreadProvider";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { SKIP_AUTH } from "@/lib/auth-config";
 
@@ -28,6 +29,7 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUserContext();
+  const { threadId } = useThreadContext();
   const { modelName, setModelName, modelConfig, setModelConfig, modelConfigs } = useModel();
 
   const handleLogout = async () => {
@@ -61,7 +63,7 @@ export function Header() {
             <ThreadHistory switchSelectedThreadCallback={() => {}} />
           </div>
           <a className="text-gray-700 hover:text-gray-900" href="/">
-            <a
+            <span
               style={{
                 backgroundClip: "text",
                 backgroundImage:
@@ -76,11 +78,14 @@ export function Header() {
               className=""
             >
               Nova
-            </a>
+            </span>
           </a>
         </div>
-        {/* 中间导航 */}
-        <nav className="flex items-center space-x-8 flex-1 justify-center">
+        {/* 中间导航 - 当有threadId时隐藏 */}
+        <nav className={cn(
+          "flex items-center space-x-8 flex-1 justify-center",
+          threadId && "hidden"
+        )}>
           <Link href="/">
             <Button
               variant="ghost"
