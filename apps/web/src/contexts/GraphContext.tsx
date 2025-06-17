@@ -154,6 +154,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [searchEnabled, setSearchEnabled] = useState(false);
   const { personalities, intentions, resources, accountStyles } = useBgData();
   const [_] = useQueryState(WEB_SEARCH_RESULTS_QUERY_PARAM);
+  const isInArtifactTag = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || !userData.user) return;
@@ -329,6 +330,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     setIsStreaming(true);
     setRunId(undefined);
     setFeedbackSubmitted(false);
+    isInArtifactTag.current = false;
 
     // 初始化返回数据
     // 从当前状态获取初始消息，确保包含用户输入
@@ -545,6 +547,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     setIsStreaming(true);
     setRunId(undefined);
     setFeedbackSubmitted(false);
+    isInArtifactTag.current = false;
 
     try {
       // 第一步：调用generateArtifact API，传入conversation_id
@@ -1129,16 +1132,37 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         type: "tool_call",
       });
       
-    }else{
+    } else {
       if (data.answer) {
-        console.log("hansking-message-data", data.answer);
-        followupContentRef.current = followupContentRef.current + data.answer;
+        let contentToAdd = '';
+        let currentChunk = data.answer;
+        
+        while (currentChunk.length > 0) {
+          if (!isInArtifactTag.current) {
+            const openIndex = currentChunk.indexOf('<artifact>');
+            if (openIndex > -1) {
+              contentToAdd += currentChunk.substring(0, openIndex);
+              currentChunk = currentChunk.substring(openIndex + '<artifact>'.length);
+              isInArtifactTag.current = true;
+            } else {
+              contentToAdd += currentChunk;
+              currentChunk = '';
+            }
+          }
+          
+          if (isInArtifactTag.current) {
+            const closeIndex = currentChunk.indexOf('</artifact>');
+            if (closeIndex > -1) {
+              currentChunk = currentChunk.substring(closeIndex + '</artifact>'.length);
+              isInArtifactTag.current = false;
+            } else {
+              // We are still inside an artifact tag, so we discard the rest of this chunk.
+              currentChunk = '';
+            }
+          }
+        }
+        followupContentRef.current += contentToAdd;
       }
-      // 需要替换掉 <artifact>xxx</artifact>
-      followupContentRef.current = followupContentRef.current.replace(
-        /<artifact>[\s\S]*<\/artifact>/g,
-        ""
-      );
     }
 
     followupMessage = new AIMessage({
