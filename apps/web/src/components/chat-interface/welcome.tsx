@@ -4,7 +4,7 @@ import { ThreadPrimitive, useThreadRuntime, useComposerRuntime, useComposer } fr
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FC, useMemo } from "react";
 import { TighterText } from "../ui/header";
-import { NotebookPen, ChevronUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { ProgrammingLanguagesDropdown } from "../ui/programming-lang-dropdown";
 import { Button } from "../ui/button";
 import { ChineseFeatureCards } from "./ChineseFeatureCards";
@@ -137,33 +137,41 @@ interface ThreadWelcomeProps {
 // 内容建议卡片数据
 const contentSuggestions = [
   [
-    '拆解小水水最新爆款视频的拍摄逻辑和分镜',
-    '给我一个"巴厘岛旅行情侣穿搭"主题的小红书vlog脚本',
+    "拆解小水水最新爆款视频的拍摄逻辑和分镜",
+    "如何快速起号？给我一个爆款Vlog拍摄脚本",
   ],
-  [
-    '现在有一款产品是带有白松香和广藿香香调的氨基酸沐浴露，主打"闻起来像高级香水"。请给我一个该产品小红书种草帖子的封面图拍摄建议',
-    '如何快速起号？给我一个爆款Vlog拍摄脚本',
-  ],
+  // [
+  //   '现在有一款产品是带有白松香和广藿香香调的氨基酸沐浴露，主打"闻起来像高级香水"。请给我一个该产品小红书种草帖子的封面图拍摄建议',
+  //   '如何快速起号？给我一个爆款Vlog拍摄脚本',
+  // ],
 ];
 
 // 新内容卡片数据
 const novaContentCards = [
   {
+    userName: '吃货小仙女',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format&q=80',
     title: '爆款泰国小吃种草文案',
     desc: 'AI 匠心打造泰国小吃种草文案！融合专业美食知识与真实探店体验，生动描绘特色口感，带你穿梭夜市与餐厅，沉浸式领略东南亚风味魅力！',
     prompt: '请模拟美食账号，写一条描述泰国小吃的爆款文案',
   },
   {
+    userName: '心理咨询师小陈',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format&q=80',
     title: '家庭创伤主题的结尾文案',
     desc: 'AI 以心理学视角剖析原生家庭创伤，融入真实故事与感悟，用温暖文字带你直面隐痛。每个细节满含关怀，开启自我疗愈之旅！',
     prompt: '请生成一组"原生家庭痛苦"话题的结尾文案，要有代入感，能引导点赞/收藏',
   },
   {
+    userName: '影视达人Leo',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format&q=80',
     title: '找到电影行业热点选题',
     desc: 'AI将精准聚焦电影行业最新热点，详细拆解背后逻辑，捕捉创作巧思，发现最佳选题，帮助你打造超吸睛的小红书内容！',
     prompt: '帮我从电影行业热点中挖掘一个符合小红书平台的内容选题并生成五篇文案',
   },
   {
+    userName: '猫奴日记',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format&q=80',
     title: '爆款宠物选题推荐',
     desc: 'AI将结合你宠物的具体特点，帮你挖掘用户痛点和宠物的萌点密码，结合宠物专业知识，帮你找到让人忍不住点赞收藏的爆款选题',
     prompt: '我是一个宠物博主，我家是个布偶猫，帮我想个这期的选题，要能够体现出我的喵喵很可爱',
@@ -185,12 +193,12 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
 
   return (
     <ThreadPrimitive.Empty>
-      <div className="min-h-screen bg-[#F7F8FA] flex flex-col items-center w-full py-20">
+      <div className="min-h-screen bg-[#fafafa] flex flex-col items-center w-full pb-14 pt-10">
         <div className="w-full mx-auto flex flex-col items-center">
           {/* 顶部标题区 */}
-          <div className="w-full flex flex-col items-center mb-16">
+          <div className="w-full flex flex-col items-center mb-4">
             <a
-              className="text-7xl font-extrabold text-gray-900 mb-6 tracking-tight"
+              className="text-[64px] font-extrabold text-gray-900 mb-6 tracking-tight"
               style={{
                 backgroundClip: "text",
                 backgroundImage:
@@ -204,15 +212,15 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
             >
               Nova
             </a>
-            <div className="text-2xl text-gray-500 font-normal mb-4 leading-relaxed">
+            <div className="text-[20px] text-[#737880] font-normal mb-4 leading-relaxed">
               将你的想法转化为精彩内容 - 从这里开始
             </div>
           </div>
 
           {/* 输入框区域（放大） */}
           <div className="w-full flex flex-col items-center mb-12">
-            <div className="w-full flex flex-row items-center justify-center gap-4 mb-8">
-              <div className="flex-1 max-w-5xl">
+            <div className="w-full flex flex-row items-center justify-center gap-4 mb-4">
+              <div className="flex-1 max-w-[672px]">
                 {/* 这里插入输入框，放大样式 */}
                 <div className="w-full">
                   {React.isValidElement(props.composer)
@@ -223,28 +231,25 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
                 </div>
               </div>
             </div>
+
             {/* 内容建议卡片区块 */}
             <div className="w-full flex flex-col items-center">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-5xl">
+              <div className="flex gap-3">
                 {contentSuggestions.map((row, i) => (
                   <React.Fragment key={i}>
                     {row.map((text, j) => (
                       <div
                         key={j}
-                        className="bg-gray-50 rounded-xl px-4 py-3 text-[#454C53] text-base flex items-center cursor-pointer hover:bg-gray-100 transition shadow-sm min-w-0"
+                        className="flex py-[9px] cursor-pointer items-center justify-center gap-1 rounded-xl bg-[#F2F3F5] px-3 py-2.25 text-sm text-[#5C6773] hover:bg-[#E5E6EC] hover:text-[#2F3640]"
                         style={{ justifyContent: "space-between" }}
                         onClick={() => {
                           handleCardClick(text);
                         }}
                       >
-                        <span className="flex-1 text-ellipsis overflow-hidden whitespace-nowrap">
+                        <span className="flex-1 text-ellipsis overflow-hidden whitespace-nowrap text-[#5C6773]">
                           {text}
                         </span>
-                        <ChevronUp
-                          size={28}
-                          strokeWidth={2.5}
-                          className="ml-6 text-gray-400"
-                        />
+                        <ArrowUp size={14} className="ml-1 text-[#5C6773]" />
                       </div>
                     ))}
                   </React.Fragment>
@@ -252,15 +257,20 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
               </div>
             </div>
           </div>
-          <TighterText className="mt-16 mb-8 text-3xl font-bold">
-            用Nova创作精彩内容
-          </TighterText>
+          <div
+            className="w-full px-4 mt-[40px] flex items-center justify-start transition-all duration-300
+          pb-8"
+          >
+            <div className="font-[Outfit] text-[24px] font-[600] text-[#323232]">
+              用Nova创作精彩内容
+            </div>
+          </div>
           {/* Nova功能卡片区块 */}
-          <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8 mt-4 px-4">
+          <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8 px-4">
             {novaContentCards.map((card, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl shadow-md p-8 flex flex-col justify-start min-h-[260px]"
+                className="bg-white rounded-2xl p-8 flex flex-col justify-start min-h-[260px] cursor-pointer hover:shadow-md transition-shadow duration-200"
                 onClick={() => handleCardClick(card.prompt)}
               >
                 <div className="text-xl font-bold text-gray-900 mb-4">
@@ -269,6 +279,16 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
                 <p className="text-gray-600 leading-relaxed text-base flex-1">
                   {card.desc}
                 </p>
+                <div className="flex items-center gap-3 mt-4">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={card.avatar} alt={card.userName} />
+                    {/* <AvatarFallback>{card.userName.slice(0, 2)}</AvatarFallback> */}
+                  </Avatar>
+                  {/* 用户信息区域 */}
+                  <span className="text-sm text-gray-500 font-medium">
+                    {card.userName}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

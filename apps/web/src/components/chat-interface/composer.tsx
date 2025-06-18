@@ -4,10 +4,11 @@ import { ComposerPrimitive, ThreadPrimitive } from "@assistant-ui/react";
 import { type FC, useState, useEffect } from "react";
 
 import { TooltipIconButton } from "@/components/ui/assistant-ui/tooltip-icon-button";
-import { SendHorizontalIcon } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { DragAndDropWrapper } from "./drag-drop-wrapper";
 import { ComposerAttachments } from "../assistant-ui/attachment";
 import { ComposerActionsPopOut } from "./composer-actions-popout";
+import { useGraphContext } from "@/contexts/GraphContext";
 
 const GENERIC_PLACEHOLDERS = [
   "分享你的灵感，让内容闪耀全场",
@@ -67,6 +68,9 @@ interface ComposerProps {
 
 export const Composer: FC<ComposerProps> = (props: ComposerProps) => {
   const [placeholder, setPlaceholder] = useState("");
+  const {
+    graphData: { searchEnabled, setSearchEnabled },
+  } = useGraphContext();
 
   useEffect(() => {
     setPlaceholder(getRandomPlaceholder(props.searchEnabled));
@@ -74,41 +78,71 @@ export const Composer: FC<ComposerProps> = (props: ComposerProps) => {
 
   return (
     <DragAndDropWrapper>
-      <ComposerPrimitive.Root className="focus-within:border-gray-400 hover:border-gray-400 border border-gray-300 flex flex-col w-full min-h-[100px] flex-wrap items-center justify-center px-2.5 shadow-sm transition-all duration-300 bg-white rounded-2xl hover:shadow-lg focus-within:shadow-lg">
-        <div className="flex flex-wrap gap-2 items-start mr-auto">
+      <ComposerPrimitive.Root className="flex flex-col w-full justify-center items-center">
+        {/* 附件显示区域 */}
+        <div className="w-full flex flex-wrap gap-2 items-start mb-2">
           <ComposerAttachments />
         </div>
 
-        <div className="flex flex-row w-full items-center justify-start my-auto">
-          <ComposerActionsPopOut
-            userId={props.userId}
-            chatStarted={props.chatStarted}
-          />
+        {/* 主输入区域 */}
+        <div className="w-full rounded-3xl bg-white border border-gray-200 hover:border-[#1a1a1a] px-4 py-3 text-[#454C53] text-base flex items-center cursor-pointer transition min-w-0 flex-col shadow-[0px_4px_40px_0px_#C1C1C140]">
+          {/* 输入框 */}
           <ComposerPrimitive.Input
             autoFocus
             placeholder={placeholder}
             rows={1}
-            className="placeholder:text-muted-foreground max-h-40 flex-grow resize-none border-none bg-transparent px-2 py-4 text-sm outline-none focus:ring-0 disabled:cursor-not-allowed"
+            className="w-full placeholder:text-gray-400 resize-none border-none bg-transparent px-0 py-1 text-base outline-none focus:ring-0 disabled:cursor-not-allowed min-h-[24px] text-[#454C53]"
           />
-          <ThreadPrimitive.If running={false}>
-            <ComposerPrimitive.Send asChild>
+          <div className="flex w-full justify-between">
+            <div className="flex items-center gap-2">
+              {/* <ComposerPrimitive.AddAttachment asChild>
+                <TooltipIconButton
+                  tooltip="Add attachment"
+                  variant="ghost"
+                  className="size-9 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                >
+                  <Plus className="size-4 text-gray-600" />
+                </TooltipIconButton>
+              </ComposerPrimitive.AddAttachment>
+
               <TooltipIconButton
-                tooltip="Send"
-                variant="default"
-                className="my-2.5 size-8 p-2 transition-opacity ease-in bg-red-500 hover:bg-red-600 rounded-lg"
+                tooltip="Web search"
+                variant="ghost"
+                className={`size-9 rounded-full hover:bg-gray-100 transition-colors duration-200 ${
+                  searchEnabled ? "bg-blue-100 text-blue-600" : ""
+                }`}
+                onClick={() => setSearchEnabled((p) => !p)}
               >
-                <SendHorizontalIcon className="text-white" />
-              </TooltipIconButton>
-            </ComposerPrimitive.Send>
-          </ThreadPrimitive.If>
+                <Globe
+                  className={`size-4 ${searchEnabled ? "text-blue-600" : "text-gray-600"}`}
+                />
+              </TooltipIconButton> */}
+            </div>
+            {/* 发送按钮 */}
+            <ThreadPrimitive.If running={false}>
+              <ComposerPrimitive.Send asChild>
+                <TooltipIconButton
+                  tooltip="Send"
+                  variant="default"
+                  className="size-8 mt-4 rounded-[12px] bg-[#6d6d6d] hover:bg-[#5a5a5a] transition-colors duration-200"
+                >
+                  <ArrowUp className="size-4 text-white" />
+                </TooltipIconButton>
+              </ComposerPrimitive.Send>
+            </ThreadPrimitive.If>
+          </div>
+
+          {/* 取消按钮 */}
           <ThreadPrimitive.If running>
             <ComposerPrimitive.Cancel asChild>
               <TooltipIconButton
                 tooltip="Cancel"
                 variant="default"
-                className="my-2.5 size-8 p-2 transition-opacity ease-in"
+                className="size-8 rounded-full bg-[#6d6d6d] hover:bg-[#5a5a5a] transition-colors duration-200"
               >
-                <CircleStopIcon />
+                <div className="text-white">
+                  <CircleStopIcon />
+                </div>
               </TooltipIconButton>
             </ComposerPrimitive.Cancel>
           </ThreadPrimitive.If>

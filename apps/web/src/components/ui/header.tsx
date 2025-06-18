@@ -76,7 +76,7 @@ export function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-0 sticky top-0 z-30">
-      <div className="flex items-center justify-between mx-auto w-full h-16">
+      <div className="flex items-center justify-between mx-auto w-full h-[48px]">
         {/* 左侧对话历史图标 */}
         <div className="flex items-center">
           <div className="hidden">
@@ -106,12 +106,12 @@ export function Header() {
           "flex items-center space-x-8 flex-1 justify-center",
           threadId && "hidden"
         )}>
-          <Button
+          {/* <Button
             variant="ghost"
             onClick={() => handleNavClick('/', 'home')}
             disabled={navLoading === 'home'}
             className={cn(
-              "relative px-4 py-8 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
+              "relative px-4 py-4 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
               pathname === "/"
                 ? "text-gray-900 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:opacity-100"
                 : "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-300 after:opacity-0 hover:after:opacity-100"
@@ -127,7 +127,7 @@ export function Header() {
             onClick={() => handleNavClick('/my-projects', 'projects')}
             disabled={navLoading === 'projects'}
             className={cn(
-              "relative px-4 py-8 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
+              "relative px-4 py-4 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
               pathname === "/my-projects"
                 ? "text-gray-900 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:opacity-100"
                 : "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-300 after:opacity-0 hover:after:opacity-100"
@@ -137,7 +137,7 @@ export function Header() {
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : null}
             我的项目
-          </Button>
+          </Button> */}
         </nav>
         {/* 右侧模型选择器和N图标 */}
         <div className="flex items-center space-x-4">
