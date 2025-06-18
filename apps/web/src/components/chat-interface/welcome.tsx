@@ -193,7 +193,7 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
 
   return (
     <ThreadPrimitive.Empty>
-      <div className="min-h-screen bg-[#fafafa] flex flex-col items-center w-full pb-14 pt-10">
+      <div className="min-h-screen pl-[76px] bg-[#fafafa] flex flex-col items-center w-full pb-14 pt-10">
         <div className="w-full mx-auto flex flex-col items-center">
           {/* 顶部标题区 */}
           <div className="w-full flex flex-col items-center mb-4">
@@ -258,7 +258,7 @@ export const ThreadWelcome: FC<ThreadWelcomeProps> = (
             </div>
           </div>
           <div
-            className="w-full px-4 mt-[40px] flex items-center justify-start transition-all duration-300
+            className="w-full px-5 mt-[40px] flex items-center justify-start transition-all duration-300
           pb-8"
           >
             <div className="font-[Outfit] text-[24px] font-[600] text-[#323232]">

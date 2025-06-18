@@ -9,6 +9,7 @@ import { UserProvider } from "@/contexts/UserContext";
 import { ThreadProvider } from "@/contexts/ThreadProvider";
 import { AssistantProvider } from "@/contexts/AssistantContext";
 import { GraphProvider } from "@/contexts/GraphContext";
+import { FloatingSidebar } from "@/components/chat-interface/FloatingSidebar";
 import { Suspense } from "react";
 
 const inter = Inter({
@@ -35,6 +36,8 @@ export default function RootLayout({
                 <GraphProvider>
                   <ModelProvider>
                     <Header />
+                    {/* 侧边悬浮导航 */}
+                    <FloatingSidebar />
                     <Suspense fallback={<div>Loading...</div>}>
                       <main className="flex-1">{children}</main>
                     </Suspense>
