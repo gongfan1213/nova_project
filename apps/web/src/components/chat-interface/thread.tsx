@@ -3,7 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ProgrammingLanguageOptions } from "@opencanvas/shared/types";
 import { ThreadPrimitive } from "@assistant-ui/react";
 import { Thread as ThreadType } from "@langchain/langgraph-sdk";
-import { ArrowDownIcon, PanelRightOpen, SquarePen } from "lucide-react";
+import { ArrowDownIcon, MessageCirclePlus, PanelRightOpen, SquarePen } from "lucide-react";
 import { Dispatch, FC, SetStateAction } from "react";
 import { ReflectionsDialog } from "../reflections-dialog/ReflectionsDialog";
 import { useLangSmithLinkToolUI } from "../tool-hooks/LangSmithLinkToolUI";
@@ -110,7 +110,7 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
           )} 
         </div>  */}
         {hasChatStarted ? (
-          <div className="flex flex-row flex-1 gap-2 items-center justify-end">
+          <div className="flex flex-row flex-1 gap-2 items-center justify-end px-2 py-1">
             {/* <TooltipIconButton
               tooltip="Collapse Chat"
               variant="ghost"
@@ -127,7 +127,7 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
               delayDuration={400}
               onClick={handleNewSession}
             >
-              <SquarePen className="text-gray-600" />
+              <MessageCirclePlus />
             </TooltipIconButton>
           </div>
         ) : (
@@ -136,7 +136,7 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
           </div>
         )}
       </div>
-      
+
       <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto scroll-smooth bg-inherit px-4 pt-0">
         {!hasChatStarted && (
           <ThreadWelcome

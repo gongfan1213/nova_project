@@ -18,6 +18,9 @@ import {
   Loader2,
   FolderIcon,
   HomeIcon,
+  HousePlus,
+  FolderKanban,
+  User,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
@@ -31,6 +34,7 @@ import { SKIP_AUTH } from "@/lib/auth-config";
 const ModelSelector = dynamic(() => import("@/components/chat-interface/model-selector"), { ssr: false });
 // 动态引入ThreadHistory，避免SSR问题
 const ThreadHistory = dynamic(() => import("@/components/chat-interface/thread-history").then(mod => mod.ThreadHistory), { ssr: false });
+
 
 export function Header() {
   const pathname = usePathname();
@@ -124,11 +128,11 @@ export function Header() {
           </Button>
           <Button
             variant="ghost"
-            onClick={() => handleNavClick('/my-projects', 'projects')}
+            onClick={() => handleNavClick('/projects', 'projects')}
             disabled={navLoading === 'projects'}
             className={cn(
               "relative px-4 py-4 text-gray-700 hover:text-gray-900 bg-transparent hover:bg-transparent",
-              pathname === "/my-projects"
+              pathname === "/projects"
                 ? "text-gray-900 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-500 after:opacity-100"
                 : "after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-red-300 after:opacity-0 hover:after:opacity-100"
             )}
@@ -168,22 +172,23 @@ export function Header() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={()=>{
-                  router.push("/");
+                  // router.push("/");
+                  window.location.href = "/";
                 }}
                 className="cursor-pointer"
               >
                 <HomeIcon className="mr-2 h-4 w-4" />
-                首页
+                Home
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={()=>{
-                  router.push('/my-projects')
+                  router.push('/projects')
                 }}
                 className="cursor-pointer"
               >
                 <FolderIcon className="mr-2 h-4 w-4" />
-                我的项目
+                Projects
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -191,7 +196,7 @@ export function Header() {
                 className="cursor-pointer"
               >
                 <UserIcon className="mr-2 h-4 w-4" />
-                个人信息
+                Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -199,7 +204,7 @@ export function Header() {
                 className="cursor-pointer text-red-600 focus:text-red-600"
               >
                 <LogOutIcon className="mr-2 h-4 w-4" />
-                退出
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
