@@ -137,6 +137,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
   const [updateRenderedArtifactRequired, setUpdateRenderedArtifactRequired] =
     useState(false);
   const lastSavedArtifact = useRef<ArtifactV3 | undefined>(undefined);
+  const lastSavedMessages = useRef<BaseMessage[]>([]);
   const debouncedAPIUpdate = useRef(
     debounce(
       (artifact: ArtifactV3, messages: BaseMessage[], threadId: string) =>
@@ -190,8 +191,8 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 如果没有 threadId，或者正在流式传输，或者线程刚切换，则不执行
     if (!threadData.threadId || isStreaming || threadSwitched) return;
 
-    // 如果没有 artifact，不需要保存
-    if (!artifact) return;
+    // // 如果没有 artifact，不需要保存
+    // if (!artifact) return;
 
     // 如果需要更新渲染状态，等待渲染完成后再保存
     if (updateRenderedArtifactRequired) return;
@@ -199,31 +200,34 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     // 如果 artifact 已经保存，不需要再次保存
     // if (isArtifactSaved) return;
     
-    const currentIndex = artifact.currentIndex;
-    const currentContent = artifact.contents.find(
-      (c) => c.index === currentIndex
-    );
-    if (!currentContent) return;
+    // const currentIndex = artifact.currentIndex;
+    // const currentContent = artifact.contents.find(
+    //   (c) => c.index === currentIndex
+    // );
+    // if (!currentContent) return;
 
-    // 如果 artifact 内容为空，不保存
-    if (
-      (artifact.contents.length === 1 &&
-        artifact.contents[0].type === "text" &&
-        !artifact.contents[0].fullMarkdown) ||
-      (artifact.contents[0].type === "code" && !artifact.contents[0].code)
-    ) {
-      return;
-    }
+    // // 如果 artifact 内容为空，不保存
+    // if (
+    //   (artifact.contents.length === 1 &&
+    //     artifact.contents[0].type === "text" &&
+    //     !artifact.contents[0].fullMarkdown) ||
+    //   (artifact.contents[0].type === "code" && !artifact.contents[0].code)
+    // ) {
+    //   return;
+    // }
 
-    // 只有当 artifact 内容真正发生变化时才保存
+    // 只有当 artifact 或者 message 内容真正发生变化时才保存
     if (
       !lastSavedArtifact.current ||
+      !lastSavedMessages.current?.length ||
       JSON.stringify(lastSavedArtifact.current.contents) !==
-        JSON.stringify(artifact.contents)
+        JSON.stringify(artifact?.contents) ||
+      JSON.stringify(lastSavedMessages.current) !== JSON.stringify(messages)
     ) {
       setIsArtifactSaved(false);
-      debouncedAPIUpdate(artifact, messages, threadData.threadId);
+      debouncedAPIUpdate(artifact!, messages, threadData.threadId);
     }
+    
   }, [
     messages,
     artifact,
@@ -271,25 +275,6 @@ export function GraphProvider({ children }: { children: ReactNode }) {
     });
   }, [threadData.threadId, userData.user, threadData.createThreadLoading]);
 
-  // useEffect(() => {
-  //   const lastMessage: any = messages.length
-  //     ? messages?.[messages.length - 1]
-  //     : undefined;
-  //   if (lastMessage?.type !== "ai") {
-  //     // 当模型回复 才存储
-  //     return;
-  //   }
-
-  //   saveThreadAfterConversation(
-  //     currentThreadData?.thread_id,
-  //     {},
-  //     {
-  //       messages: messages as BaseMessage[],
-  //       artifact: artifact as ArtifactV3,
-  //     }
-  //   );
-  // }, [messages]);
-
   const updateArtifact = async (
     artifactToUpdate: ArtifactV3,
     messagesToUpdate: BaseMessage[],
@@ -308,6 +293,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       });
       setIsArtifactSaved(true);
       lastSavedArtifact.current = artifactToUpdate;
+      lastSavedMessages.current = messagesToUpdate;
     } catch (_) {
       setArtifactUpdateFailed(true);
     }
@@ -1065,6 +1051,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
         currentIndex: index,
       };
       lastSavedArtifact.current = newArtifact;
+      lastSavedMessages.current = messages as BaseMessage[];
       return newArtifact;
     });
   };
@@ -1138,6 +1125,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       castValues.artifact = undefined;
     }
     lastSavedArtifact.current = castValues?.artifact;
+    lastSavedMessages.current = castValues?.messages as BaseMessage[];
 
     if (!castValues?.messages?.length) {
       setMessages([]);
