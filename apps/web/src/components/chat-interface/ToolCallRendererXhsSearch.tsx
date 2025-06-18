@@ -1,6 +1,9 @@
 // startCall.tool_input
 // endCall.observation
 
+import { getProxyImageUrl } from '@/lib/image-proxy'
+import Image from 'next/image'
+
 interface XhsItem {
   note_display_title: string
   note_url: string
@@ -66,12 +69,17 @@ export const ToolCallRendererXhsSearch = ({ toolGroup }: { toolGroup: any }) => 
               className="flex bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
             >
               <div className="flex-shrink-0">
-                <img
-                  src={item.note_cover_url_default}
+                <Image
+                  src={getProxyImageUrl(item.note_cover_url_default)}
                   alt={"cover"}
                   className="w-24 h-24 object-cover"
+                  width={96}
+                  height={96}
+                  referrerPolicy="no-referrer"
                   onError={(e) => {
-                    // (e.target as HTMLImageElement).style.display = 'none'
+                    // 如果代理图片也失败，尝试显示默认图片或隐藏
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
                   }}
                 />
               </div>

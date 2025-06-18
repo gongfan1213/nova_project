@@ -1,6 +1,12 @@
 "use client";
 
-import { PropsWithChildren, useEffect, useState, type FC } from "react";
+import {
+  forwardRef,
+  PropsWithChildren,
+  useEffect,
+  useState,
+  type FC,
+} from "react";
 import { CircleXIcon, FileIcon, PaperclipIcon } from "lucide-react";
 import {
   AttachmentPrimitive,
@@ -24,6 +30,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import { cn } from "@/lib/utils";
+import { getProxyImageUrl } from "@/lib/image-proxy";
 
 const useFileSrc = (file: File | undefined) => {
   const [src, setSrc] = useState<string | undefined>(undefined);
@@ -69,7 +76,7 @@ const AttachmentPreview: FC<AttachmentPreviewProps> = ({ src }) => {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={getProxyImageUrl(src)}
       style={{
         width: "auto",
         height: "auto",
@@ -78,6 +85,7 @@ const AttachmentPreview: FC<AttachmentPreviewProps> = ({ src }) => {
         display: isLoaded ? "block" : "none",
         overflow: "clip",
       }}
+      referrerPolicy="no-referrer"
       onLoad={() => setIsLoaded(true)}
       alt="Preview"
     />

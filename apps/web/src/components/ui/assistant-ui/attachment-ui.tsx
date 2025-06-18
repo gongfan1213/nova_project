@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../tooltip";
+import { getProxyImageUrl } from "@/lib/image-proxy";
 
 const AttachmentRoot = withDefaults(AttachmentPrimitive.Root, {
   className: "aui-attachment-root",
@@ -82,7 +83,7 @@ const AttachmentPreview: FC<AttachmentPreviewProps> = ({ src }) => {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={getProxyImageUrl(src)}
       style={{
         width: "auto",
         height: "auto",
@@ -91,6 +92,7 @@ const AttachmentPreview: FC<AttachmentPreviewProps> = ({ src }) => {
         display: isLoaded ? "block" : "none",
         overflow: "clip",
       }}
+      referrerPolicy="no-referrer"
       onLoad={() => setIsLoaded(true)}
       alt="Image Preview"
     />
